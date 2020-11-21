@@ -12,7 +12,7 @@ The current plan is to have each module run with its own ESP32 microcontroller, 
 ### Programming
 - [x] Basic game logic common to all modules
 - [x] CAN communication between modules
-- [ ] BLE communication between Master ESP32 and phone app
+- [x] BLE communication between Master ESP32 and phone app
 - [ ] Complete timer (Master) module
 - [ ] Complete standard modules
 - [ ] Complete needy modules
