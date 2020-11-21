@@ -1,26 +1,33 @@
-# Keep Talking Or the Microcontroller Explodes
-KTOME - the ESP32-based follow-on from the Arduino Mega prototype
+# BLE communication
 
-## Goal of the project
-I'm aiming to copy the Keep Talking And Nobody Explodes videogame as closely as possible, within the bounds of my skill and what parts are available.
+## BLE introduction
+Bluetooth Low Energy (BLE) is a light-weight version of Bluetooth, utilised in many low-power devices such as fitness wearables. This differs from core Bluetooth communications as it limits communications to short, discrete messages rather than data streaming.
+The master device (in this case the ESP32 timer) starts and advertises a service. Other devices (the companion phone app) can detect the advertisement and connect, becoming slaves.
+Messages are limited to 19 bytes each, requiring careful thought to how to utilise the service.
 
-I started this project around February 2020, going down the route of one Arduino Mega controlling the bomb. I completed a prototype of 3 - 4 modules plus the timer, before deciding the change my approach given what I had learned from the prototype. The prototype can be viewed [here](https://www.youtube.com/watch?v=qZbycguCcf4)!
+## BLE messages
+Message | BLE content
+------------ | -------------
+App moving to Game manager screen | I
+App asking for a refresh of mods | I
+ESP replying with list of connected mods | i 1 0 0... 
+App enabling hardcore | h=1
+App disabling hardcore | h=0
+App setting game timer | t=5
+App to start manual mod setup | C
+App to confirm this mod is setup | >
+App to abort manual setup | <
+ESP to send setup data: wires | c w 1 2 3 4 5 6
+ESP to send setup data: button | c b 1 2
+ESP to send setup data: keypad | c k 1 2 3 4
+ESP to send setup data: cwires | c p ...
+ESP to send setup data: wiresq | c q ...
+ESP to send setup data: all setup complete | c Y
+ESP to reject confirmation of mod setup | c X
+App to start game | A
+App to stop game | Z
 
-The current plan is to have each module run with its own ESP32 microcontroller, communicating with each other using the CAN protocol. The modules will be plug-and-play into the bomb chassis, allowing you to bomb your own challenge. The parts will be built up with electronics which can provide the same functionality and aesthetics as the game, allowing the original manual to be used, with use of a 3D printer which is a new investment for me. The game will be customisable through a companion phone app, which can set things such as hardcore mode or the game timer via a BLE connection.
+The companion app makes good use of space-separated lists due to the limitations of the programming environment.
 
-## Current progress and to-do
-### Programming
-- [x] Basic game logic common to all modules
-- [x] CAN communication between modules
-- [ ] BLE communication between Master ESP32 and phone app
-- [ ] Complete timer (Master) module
-- [ ] Complete standard modules
-- [ ] Complete needy modules
-### Design
-- [ ] Basic module designs (blank faceplate and box)
-- [ ] Case and edgework
-- [ ] Find electronics which matches game as closely as possible
-- [ ] Power solution
-- [ ] Module connectors
-- [ ] Complete standard modules
-- [ ] Complete needy modules
+When the ESP sends module list to the app, a space-separated list of the module count for each module is sent. Two messages are required in total to communicate all of the information, as one 19-byte message cannot send info for all 14 modules using a space-separated list.
+ESP messages with module setup info have numbers which reference lists of colours, labels, symbols etc. So a message of "c b 1 2" would state the setup for the Button module, with 1 referring to the first colour in the colour array and 2 referring to the second label in the label array.
