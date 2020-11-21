@@ -62,8 +62,10 @@ Module to tell master of a defusal | d
 Module to request time from master | t
 Master to transmit time | T0000 *
 
-* Time sent as digits appear on the clock, not the time in seconds!
-
+Note: Time sent as digits appear on the clock, not the time in seconds!
+ 
+### Manual setup message specifics
+ 
 Manual setup message | CAN content
 ------------ | -------------
 Wires | crwk yb (lower case letter or space)
@@ -71,6 +73,8 @@ Button | crd (colour then label)
 Keypad | c479: (number for each symbol, starting from ASCII 0 for easy serial printing)
 C Wires | c1234 (each byte uses 6 bits for each wire slot, referrencing whether the wire is white, red, blue, * - LED is not needed to be known by the user)
 Wire S | c1  rAbC (two messages to be sent, last 6 bytes denote colour and destination for each numbered slot)
+
+### Widget setup message specifics
 
 Widget setup message | CAN content
 ------------ | -------------
