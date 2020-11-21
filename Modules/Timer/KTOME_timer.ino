@@ -19,6 +19,7 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+#include <BLE2902.h>
 #include <Wire.h>
 #include <CAN.h>
 //#include <Adafruit_GFX.h>
@@ -40,6 +41,8 @@
 // Game
 byte gamemode = 0;
 bool game_ready = false;
+bool holding = false;
+bool manual_check = false;
 
 int module_array[12];
 bool module_detected = false;
@@ -118,10 +121,17 @@ int msg_rec_id;
 
 // BLE
 bool deviceConnected = false;
+//bool deviceConnected_prev = false;
 String BLE_value;
 String BLE_state = "";
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define SERVICE_UUID            "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define CHARACTERISTIC_UUID_RX  "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define CHARACTERISTIC_UUID_TX  "beb5483f-36e1-4688-b7f5-ea07361b26a8"
+
+BLEServer* pServer = NULL;
+BLECharacteristic* pTxCharacteristic = NULL;
+uint8_t txValue = 0;
+
 String temp_holder;
 
 class MyServerCallbacks: public BLEServerCallbacks {
@@ -130,16 +140,18 @@ class MyServerCallbacks: public BLEServerCallbacks {
     };
     void onDisconnect(BLEServer* pServer) {
       deviceConnected = false;
+      gamemode = 0;
     }
 };
 
 class MyCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
-      std::string value = pCharacteristic->getValue();
-      if (value.length() > 0) {
+      std::string rxValue = pCharacteristic->getValue();
+
+      if (rxValue.length() > 0) {
         BLE_value = "";
-        for (int i = 0; i < value.length(); i++) {
-          BLE_value = BLE_value + value[i];
+        for (int i = 0; i < rxValue.length(); i++) {
+          BLE_value = BLE_value + rxValue[i];
         }
         Serial.print("BLE_value = ");
         Serial.println(BLE_value);
@@ -157,49 +169,34 @@ class MyCallbacks: public BLECharacteristicCallbacks {
             hardcore_mode = true;
           }
           BLE_state = "ok";
-        } else if (BLE_value == "ml") { // Request for list of connected modules
-          for (byte i = 1; i < 15; i++) {
-            if (i > 1) {
-              BLE_state = BLE_state + " ";
-            }
-            spec_mod_count = 0;
-            for (byte j = 0; j < module_count; j++) {
-              if ((module_array[j] & CAN_TO_ALL_MOD) == (CAN_TO_MASTER >> i)) {
-                spec_mod_count++;
-              }
-            }
-            BLE_state = BLE_state + char(spec_mod_count + '0'); // Space=separated list of numbers corresponding to the amount of modules detected in the bomb
-          }
-        } else if (BLE_value == "mL") { // Request for list of connected modules
-          gamemode = 0;
-          for (byte i = 1; i < 15; i++) {
-            if (i > 1) {
-              BLE_state = BLE_state + " ";
-            }
-            spec_mod_count = 0;
-            for (byte j = 0; j < module_count; j++) {
-              if ((module_array[j] & CAN_TO_ALL_MOD) == (CAN_TO_MASTER >> i)) {
-                spec_mod_count++;
-              }
-            }
-            BLE_state = BLE_state + char(spec_mod_count + '0'); // Space=separated list of numbers corresponding to the amount of modules detected in the bomb
-          }
-        } else if (BLE_value == "ri") { // Request master to re-run initialisation of connect modules
-          BLE_state = "ok";
-          gamemode = 0;
-        } else if (BLE_value == "mms") { // Start manual module setup
-          BLE_state = "b 2 3"; // Space=separated list of manual setup instructions: first char is letter coded to module type, then numbers corresponding to app array
-        } else if (BLE_value == "?") { // Check/confirm manual setup
-          BLE_state = "ok"; // "!" if incorrect on check, otherwise send next manual module setup as above; "ok" when completed setup for all modules
-        } else if (BLE_value == "gs") { // Start game
-          game_ready = true;
-          BLE_state = "ok";
-        } else if (BLE_value == "check") { // LEGACY - unused
-          BLE_state = "";
-          // Add in statements to change BLE_state, which will be sent back to phone
-          BLE_state = "timer = " + char(gamelength);
+        } else if (BLE_value == "I") { // App moving from BLE connection screen to Game Manager or manual re-poll of connected modules
+          gamemode = 1; // Now (re-)start polling connected modules
+          holding = false;
+          //
+
+        } else if (BLE_value == "C") { // App starting module manual setup
+          gamemode = 2;
+          holding = false;
+        } else if (BLE_value == ">") {
+          manual_check = true;
+          holding = false;
+
+          //        } else if (BLE_value == "ri") { // Request master to re-run initialisation of connect modules
+          //          BLE_state = "ok";
+          //          gamemode = 0;
+          //        } else if (BLE_value == "mms") { // Start manual module setup
+          //          BLE_state = "b 2 3"; // Space=separated list of manual setup instructions: first char is letter coded to module type, then numbers corresponding to app array
+          //        } else if (BLE_value == "?") { // Check/confirm manual setup
+          //          BLE_state = "ok"; // "!" if incorrect on check, otherwise send next manual module setup as above; "ok" when completed setup for all modules
+          //        } else if (BLE_value == "gs") { // Start game
+          //          game_ready = true;
+          //          BLE_state = "ok";
+          //        } else if (BLE_value == "check") { // LEGACY - unused
+          //          BLE_state = "";
+          //          // Add in statements to change BLE_state, which will be sent back to phone
+          //          BLE_state = "timer = " + char(gamelength);
         }
-        pCharacteristic->setValue(BLE_state.c_str()); // Return status
+        //        pCharacteristic->setValue(BLE_state.c_str()); // Return status
         Serial.print("BLE_state = ");
         Serial.println(BLE_state);
       }
@@ -231,16 +228,18 @@ void setup() {
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
   BLEService *pService = pServer->createService(SERVICE_UUID);
-  BLECharacteristic *pCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_INDICATE);
-  pCharacteristic->setCallbacks(new MyCallbacks());
-//  pCharacteristic->setValue("Starting...");
+
+  pTxCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_TX, BLECharacteristic::PROPERTY_NOTIFY);
+  pTxCharacteristic->addDescriptor(new BLE2902());
+
+  BLECharacteristic * pRxCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_RX, BLECharacteristic::PROPERTY_WRITE);
+
+  pRxCharacteristic->setCallbacks(new MyCallbacks());
+
   pService->start();
-  BLEAdvertising *pAdvertising = pServer->getAdvertising();
-  pAdvertising->start();
+  pServer->getAdvertising()->start();
 
   // Randomiser
-  //  Entropy.initialize();
-  //  randomSeed(Entropy.random());
   esp_random();
 
   pinMode(PIN_LED, OUTPUT);
@@ -253,34 +252,58 @@ void setup() {
 void loop() {
 
   switch (gamemode) {
-    case 0: // First time set-up
+    case 0: // Connect to phone
+      phoneConnect();
+      carPark();
+      break;
+    case 1: // Module poll
       Serial.println(F("Module search..."));
       initialisation();
-      gamemode = 1;
+      carPark();
       break;
-    case 1: // Game in set-up
+    case 2: // Game (manual) set-up
       Serial.println(F("Game set-up..."));
       phoneSetup();
+      carPark();
       break;
-    case 2: // Game running
+    case 3: // Game running
       Serial.println(F("Game starting!"));
       gameRunning();
       break;
-    case 3: // Game wash-up: stand-by state, showing outcome and waiting for new game to be trigger from phone
+    case 4: // Game wash-up: stand-by state, showing outcome and waiting for new game to be trigger from phone
 
       break;
   }
 }
 
+void carPark() {
+  holding = true;
+  Serial.println("Script parked - waiting for direction...");
+  while (holding) {
+    delay (1);
+  }
+}
+
 //**********************************************************************
-// FUNCTIONS: Game Initialisation
+// FUNCTIONS: Companion App Setup : gamemode = 0
 //**********************************************************************
 
-// Comm with modules to determine what's connected
+void phoneConnect() {
+  Serial.println("Waiting for phone connection...");
+  while (!deviceConnected) {
+    delay(500);
+    Serial.println("waiting...");
+  }
+  Serial.println("Phone connected!");
+}
 
-void initialisation() {
+//**********************************************************************
+// FUNCTIONS: Game Initialisation : gamemode = 1
+//**********************************************************************
 
-  delay(2000);
+void initialisation() { // Comm with modules to determine what's connected
+
+  //  delay(500);
 
   byte max_module_copies = 4;
   char CAN_message[2];
@@ -288,51 +311,13 @@ void initialisation() {
 
   Serial.println("Starting search for modules...");
   module_count = 0;
-  
-
-  //  for (byte c_type = 0; c_type < 14; c_type++) { // Non-shortcut to look through all modules
-
-  //  for (byte c_type = 0; c_type < 1; c_type++) { // Shortcut to just look for wires modules for now...
-  //    for (byte c_muid = 0; c_muid < max_module_copies; c_muid++) {
-  //      module_detected = false;
-  //      CAN_message[0] = 'P';
-  //      CAN_message[1] = '\0';
-  //      CANSend((CAN_TO_WIRES >> c_type) | (CAN_MUID_1 >> c_muid), CAN_message, 1);
-  //
-  //      module_detected = false;
-  //      digitalWrite(PIN_LED, HIGH);
-  //      delay(100);
-  //      if (msg_waiting) {
-  //        CANReceive();
-  //        if (module_detected) {
-  //          module_array[module_count] = ((CAN_TO_WIRES >> c_type) | (CAN_MUID_1 >> c_muid));
-  //          module_count++;
-  //          Serial.print("Module count: ");
-  //          Serial.println(module_count);
-  //          Serial.print("Module id: ");
-  //          padZerosCAN((CAN_TO_WIRES >> c_type) | (CAN_MUID_1 >> c_muid));
-  //          Serial.println((CAN_TO_WIRES >> c_type) | (CAN_MUID_1 >> c_muid), BIN);
-  //        }
-  //      }
-  //      digitalWrite(PIN_LED, LOW);
-  //      delay(900);
-  //    }
-  //  }
 
   // Why are we cycling through all modules and sending a message for each? Just send one message to all!
   CAN_message[0] = 'P';
   CAN_message[1] = '\0';
   CANSend((CAN_TO_ALL_MOD | CAN_MUID_ALL), CAN_message, 1);
-  
-  //  CANSend(0b01000000000000001000000000000, CAN_message, 1);
-  //  CANSend(0b11000000000000001000000000000, CAN_message, 1);
-  //  CANSend(0b01000000000000001010000000000, CAN_message, 1);
-  //  CANSend(0b11000000000000001010000000000, CAN_message, 1);
-  //  CANSend(0b01000000000000001000000000000, CAN_message, 1);
-  //  CANSend((CAN_TO_WIRES | CAN_MUID_2), CAN_message, 1);
-  //  Serial.println((CAN_TO_WIRES | CAN_MUID_2) - 0b01000000000000001000000000000);
-  
-  delay(500);
+
+  delay(1000);
 
   do { // There are outstanding messages
     CANReceive();
@@ -354,11 +339,28 @@ void initialisation() {
     Serial.println(module_array[ii], BIN);
   }
 
+  for (byte msg_part = 0; msg_part < 2; msg_part++) {
+    String BLE_msg;
+    BLE_msg = "i ";
+    BLE_msg += (msg_part + 1);
+    for (byte msg_mod = (1 + (7 * msg_part)); msg_mod < (8 + (7 * msg_part)); msg_mod++) {
+      spec_mod_count = 0;
+      for (byte msg_num = 0; msg_num < module_count; msg_num++) {
+        if ((module_array[msg_num] & CAN_TO_ALL_MOD) == (CAN_TO_MASTER >> msg_mod)) {
+          spec_mod_count++;
+        }
+      }
+      BLE_msg += ' ';
+      BLE_msg += char(spec_mod_count + '0'); // Space=separated list of numbers corresponding to the amount of modules detected in the bomb
+    }
+    BLESend(BLE_msg);
+    delay(100);
+  }
 
 }
 
 //**********************************************************************
-// FUNCTIONS: Game Setup
+// FUNCTIONS: Game Setup : gamemode = 2
 //**********************************************************************
 
 // Comm with phone to set up a game
@@ -374,29 +376,32 @@ void phoneSetup() {
 
   long timer_int;
 
-  do {
-
-    thismillis = millis();
-    bool led_state;
-
-    if (thismillis > timer_int) {
-      timer_int = thismillis + 250;
-      if (led_state) {
-        digitalWrite(PIN_LED, LOW);
-        led_state = false;
-      } else {
-        digitalWrite(PIN_LED, HIGH);
-        led_state = true;
-      }
-    }
-
-  } while (!game_ready && (gamemode == 1));
+  //  do {
+  //
+  //    thismillis = millis();
+  //    bool led_state;
+  //
+  //    if (thismillis > timer_int) {
+  //
+  //      if (led_state) {
+  //        digitalWrite(PIN_LED, LOW);
+  //        led_state = false;
+  //        timer_int = thismillis + 800;
+  //      } else {
+  //        digitalWrite(PIN_LED, HIGH);
+  //        led_state = true;
+  //        timer_int = thismillis + 200;
+  //      }
+  //    }
+  //
+  //  } while (!game_ready && (gamemode == 2));
 
 }
 
 void moduleCheck() {
 
   char CAN_message[2];
+  bool manual_error = false;
 
   // Send request to modules to generate games
   CANSend((CAN_TO_ALL_MOD | CAN_MUID_ALL), "I", 1);
@@ -404,7 +409,7 @@ void moduleCheck() {
   // Need to check that all modules have replied that they have completed their setup!
 
   byte mods_setup = 0;
-  do { // There are outstanding modules to set up
+  do { // There are outstanding modules to generate a game
     CANReceive();
     if (module_inited) {
       Serial.print("Module 0b");
@@ -417,6 +422,8 @@ void moduleCheck() {
     }
   } while (mods_setup != module_count);
 
+  String BLE_msg;
+
   // Receive games back
   for (byte ii = 0; ii < module_count; ii++) {
     Serial.print("Checking manual for module ");
@@ -424,42 +431,70 @@ void moduleCheck() {
     //    Serial.print("0b");
     //    padZerosCAN(module_array[ii] & CAN_MANUALSETUP);
     //    Serial.println(module_array[ii] & CAN_MANUALSETUP, BIN);
+
+    BLE_msg = "c ";
+
     if ((module_array[ii] & CAN_MANUALSETUP) > 0 ) { // This module needs manual setup
       Serial.println("Needs manual setup!");
       CAN_message[0] = 'C';
       CAN_message[1] = '\0';
       CANSend(module_array[ii], CAN_message, 1);
-      delay(500);
-      if (buffer_pointer_r != buffer_pointer_w) {
-        CANReceive();
-        if (module_array[ii] & CAN_TO_WIRES > 0 ) {
-
-        } else if ((module_array[ii] & CAN_TO_BUTTON) > 0 ) {
-
-        } else if ((module_array[ii] & CAN_TO_KEYPAD) > 0 ) {
-          Serial.println("Keypad setup incoming...");
-          byte keypad_r1 = msg_received[1] - '0';
-          byte keypad_r2 = msg_received[2] - '0';
-          byte keypad_r3 = msg_received[3] - '0';
-          byte keypad_r4 = msg_received[4] - '0';
-          Serial.print("Keypad key IDs: ");
-          Serial.print(keypad_r1);
-          Serial.print(", ");
-          Serial.print(keypad_r2);
-          Serial.print(", ");
-          Serial.print(keypad_r3);
-          Serial.print(", ");
-          Serial.println(keypad_r4);
-        } else if ((module_array[ii] & CAN_TO_CWIRES) > 0 ) {
-
-        } else if ((module_array[ii] & CAN_TO_WIRESQ) > 0 ) {
-
-        }
-        // msg_received is available to pull the info from...
+      while (buffer_pointer_r == buffer_pointer_w) {
+        delay(500);
+        Serial.println("Waiting for module setup response...");
       }
+      CANReceive();
+      if (module_array[ii] & CAN_TO_WIRES > 0 ) { // Module needing setup is WIRES
+
+      } else if ((module_array[ii] & CAN_TO_BUTTON) > 0 ) {  // Module needing setup is BUTTON
+
+      } else if ((module_array[ii] & CAN_TO_KEYPAD) > 0 ) {  // Module needing setup is KEYPAD
+        Serial.println("Keypad setup incoming...");
+        byte keypad_r1 = msg_received[1] - '0';
+        byte keypad_r2 = msg_received[2] - '0';
+        byte keypad_r3 = msg_received[3] - '0';
+        byte keypad_r4 = msg_received[4] - '0';
+        Serial.print("Keypad key IDs: ");
+        Serial.print(keypad_r1);
+        Serial.print(", ");
+        Serial.print(keypad_r2);
+        Serial.print(", ");
+        Serial.print(keypad_r3);
+        Serial.print(", ");
+        Serial.println(keypad_r4);
+        BLE_msg += 'k';
+        for (byte jj = 0; jj < 4; jj++) {
+          BLE_msg += ' ';
+          BLE_msg += msg_received[jj + 1] - '0';
+        }
+        BLESend(BLE_msg);
+        manual_check = false;
+        carPark(); // Wait for user to complete manual setup
+        if (manual_check) { // User states this module is setup
+
+        } else {
+          Serial.println("Expecting module check, but received another message!");
+          manual_error = true;
+          break;
+        }
+
+      } else if ((module_array[ii] & CAN_TO_CWIRES) > 0 ) { // Module needing setup is COMPLICATED WIRES
+
+      } else if ((module_array[ii] & CAN_TO_WIRESQ) > 0 ) { // Module needing setup is WIRE SEQUENCE
+
+      }
+
     } else {
       Serial.println("Does not need manual setup!");
     }
+    if (manual_error) { // Likely another command came in when expecting a manual setup message from app
+      Serial.println("Aborting loop to check modules setup.");
+      break;
+    } 
+  }
+  if (!manual_error) { // If all went well, send final message to check all manual setup is complete
+    BLE_msg = "c Y";
+    BLESend(BLE_msg);
   }
 }
 
@@ -729,18 +764,27 @@ void CANReceive() {
     Serial.print(msg_received);
     Serial.println("\"");
 
-    if (msg_received[0] == 'p' && gamemode == 0) {
+    if (msg_received[0] == 'p' && gamemode == 1) {
       module_detected = true;
       Serial.println("Module detected!");
     }
-    else if (msg_received[0] == 'i' && gamemode == 1) {
+    else if (msg_received[0] == 'i' && gamemode == 2) {
       module_inited = true;
       Serial.println("Module has declare it is setup!");
     }
-    else if (msg_received[0] == 'c' && gamemode == 1) {
+    else if (msg_received[0] == 'c' && gamemode == 2) {
       Serial.println("Module is transmitting it's manual setup needs!");
     }
   }
+}
+
+void BLESend(String msg_data) {
+  String BLE_output(msg_data);
+  Serial.print("Sending \"");
+  Serial.print(msg_data);
+  Serial.println("\" to phone app...");
+  pTxCharacteristic->setValue(BLE_output.c_str());
+  pTxCharacteristic->notify();
 }
 
 //**********************************************************************
@@ -748,89 +792,10 @@ void CANReceive() {
 //**********************************************************************
 
 void padZerosCAN(int id) {
-  if (id < (1 << 28)) {
-    Serial.print("0");
+  for (byte ii = 28; ii > 0; ii--) {
+    if (id < (1 << ii)) {
+      Serial.print("0");
+    }
   }
-  if (id < (1 << 27)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 26)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 25)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 24)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 23)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 22)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 21)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 20)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 19)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 18)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 17)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 16)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 15)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 14)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 13)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 12)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 11)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 10)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 9)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 8)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 7)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 6)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 5)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 4)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 3)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 2)) {
-    Serial.print("0");
-  }
-  if (id < (1 << 1)) {
-    Serial.print("0");
-  }
-  //  if (id<(1)) {Serial.print("0");}
 }
+ 
