@@ -2,8 +2,16 @@
 
 ## BLE introduction
 Bluetooth Low Energy (BLE) is a light-weight version of Bluetooth, utilised in many low-power devices such as fitness wearables. This differs from core Bluetooth communications as it limits communications to short, discrete messages rather than data streaming.
-The master device (in this case the ESP32 timer) starts and advertises a service. Other devices (the companion phone app) can detect the advertisement and connect, becoming slaves.
+In KTOME, the master device (in this case the ESP32 timer) starts and advertises a service. Other devices (the companion phone app) can detect the advertisement and connect, becoming the client.
 Messages are limited to 19 bytes each, requiring careful thought to how to utilise the service.
+
+## Library
+I'm using the built-in ESP32 BLE libraries:
+* BLEDevice.h
+* BLEUtils.h
+* BLEServer.h
+* BLE2902.h
+Learning how to implement BLE messaging was gleaned from the excellent tutorials here: https://community.appinventor.mit.edu/t/ble-esp32-bluetooth-send-receive-arduino-ide/1980
 
 ## BLE messages
 Message | BLE content

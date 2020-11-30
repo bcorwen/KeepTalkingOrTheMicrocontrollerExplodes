@@ -5,8 +5,11 @@ Controller Area Network (CAN) is a serial communications protocol, designed and 
 As ESP32 have an in-built CAN-controller, adding CAN transceiver chips allow for easy use of CAN communications between microcontrollers.
 CAN is used in this project to enable module-to-module, ESP-to-ESP communications.
 CAN nodes each have a CAN ID, an 11-bit (or 29-bit for extended frame) number. Messages can be tagged with an ID, which can allow messages to be directed at certain nodes and ignored by others. Filters can be employed with masks to allow for partial ID matches.
-The extended frame is used in this project, with the first 15 bits used to specify the type of module, and the next 4 bits used to differentiate modules of the same type. Only one bit is used at a time (so a max of 4, not 2^4) due to limitations on how to address specific or all modules without changing the filter.
+The extended frame is used in this project, with the first 15 bits used to specify the type of module, and the next 4 bits used to differentiate modules of the same type. Only one bit is used at a time (so a max of 4, not 2^4) due to limitations on how to address specific or all modules without changing the filter. The ID and filter for a module are set to the same value.
 Messages are 29-bytes long, requiring some planning with the message formats.
+
+## Library
+I'm using the incredibly simple library from timurrr, available here: https://github.com/timurrrr/arduino-CAN , a branch from he library by sandeepmistry.
 
 ## Module identification
 CAN ID bit | Used to denote
@@ -86,3 +89,15 @@ Widget setup message | CAN content
 6th bit | 0 or 1 (FRK indicator boolean)
 7th bit | 0 or 1 (Serial port boolean)
 8th bit | 0 or 1 (Parallel port boolean)
+
+## Examples
+
+The master may broadcast a message to find what is connected:
+* Message ID: 0b01111111111111111110000000000 (Bits 28 to 15 high to address every module and bits 14 to 11 high to address every unique version of each module)
+* Message content: "P"
+
+A module of keypad is connected, with ID and filter 0b00010000000000010000000000000, which picks up this message and replied:
+* Message ID: 0b10010000000000010000000000000
+* Message content: "p"
+
+The master has an ID and filter of 0b10000000000000000000000000000, which picks up this message. The master looks at the other bits in the message ID to identify the sending module.
