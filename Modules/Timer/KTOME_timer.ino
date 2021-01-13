@@ -2,14 +2,14 @@
 //
 //  Keep Talking Or the Microcontroller Explodes!
 //
-//    - bcorwen, 23/12/20
+//    - bcorwen, 31/12/20
 //======================================================================
 //
 //  Module: Timer (MASTER)
 //
-//  version 0.2.0
+//  version 0.4.0
 //
-//  Goal for this version: Get this thing going!
+//  Goal for this version: Complete game logic and common comms
 //
 //======================================================================
 
@@ -260,16 +260,15 @@ void loop() {
     case 2: // Game (manual) set-up
       Serial.println(F("Game set-up..."));
       phoneSetup();
+      gameReset();
       carPark();
       break;
     case 3: // Game running
       Serial.println(F("Game starting!"));
-      removeBeforeFlight();
       gameRunning();
       break;
     case 4: // Game wash-up: stand-by state, showing outcome and waiting for new game to be trigger from phone
       // Show outcome
-      // Reset variables (timer, strikes, module specifics...)
       stopMessages();
       carPark();
       break;
@@ -386,10 +385,9 @@ void phoneSetup() {
   serialGenerate(); // Generate serial #
 
   char CAN_message[9];
-  CAN_message[0] = 'S';
+  CAN_message[0] = 'W';
   if (serial_vowel) {
     CAN_message[1] = '1';
-  } else {
     CAN_message[1] = '0';
   }
   if (serial_odd) {
@@ -469,14 +467,12 @@ void moduleCheck() {
 
     if ((module_array[ii] & CAN_MANUALSETUP) > 0 ) { // This module needs manual setup
       Serial.println("Needs manual setup!");
-      CAN_message[0] = 'C';
-      CAN_message[1] = '\0';
       digitalWrite(PIN_LED, HIGH);
-      ktomeCAN.send(module_array[ii], CAN_message, 1);
+      ktomeCAN.send(module_array[ii], "C" , 1);
       digitalWrite(PIN_LED, LOW);
 
       while (!ktomeCAN.messageWaiting()) {
-        delay(500);
+        delay(100);
         Serial.println("Waiting for module setup response...");
       }
       CANInbox();
@@ -508,7 +504,9 @@ void moduleCheck() {
         manual_check = false;
         carPark(); // Wait for user to complete manual setup
         if (manual_check) { // User states this module is setup
-
+          digitalWrite(PIN_LED, HIGH);
+          ktomeCAN.send(module_array[ii], "M" , 1);
+          digitalWrite(PIN_LED, LOW);
         } else {
           Serial.println("Expecting module check, but received another message!");
           manual_error = true;
@@ -613,6 +611,17 @@ void serialGenerate () {
   serial_number[6] = '\0';
   Serial.print(F("Serial #: "));
   Serial.println(serial_number);
+
+  char can_msg[8];
+  can_msg[0] = 'S';
+  for (byte i = 0; i < 6; i++) {
+     can_msg[i+1] = serial_number[i];
+  }
+  can_msg[7]='\0';
+  digitalWrite(PIN_LED, HIGH);
+  ktomeCAN.send(CAN_WIDGETS, can_msg, 7);
+  digitalWrite(PIN_LED, LOW);
+
   //    Serial.print("Vowels?: ");
   //    Serial.println(serial_vowel);
   //    Serial.print("Even?: ");
@@ -653,13 +662,11 @@ char char_generator(bool alphanum_type) {
 // FUNCTIONS: Game Managers
 //**********************************************************************
 
-void removeBeforeFlight() {
+void gameReset() {
 
   game_win = false;
 
   //Set timer
-  timeleft = gamelength;
-  timerUpdate();
   strike_number = 0;
   if (hardcore_mode) {
     strike_limit = 1;
@@ -670,19 +677,24 @@ void removeBeforeFlight() {
 
   memset(module_solved_array, 0, sizeof(module_solved_array));
 
-  String BLE_msg = "m ";
-  BLE_msg = BLE_msg + module_count_solvable;
-  BLESend(BLE_msg);
-
-  delay(random(2000) + 1000);
-
-  ktomeCAN.send((CAN_ALL_MOD | CAN_MUID_ALL), "A", 1);
-
 }
 
 void gameRunning() {
 
   bool message_waiting = false;
+
+  timeleft = gamelength;
+  timerUpdate();
+  String BLE_msg = "m ";
+  BLE_msg = BLE_msg + module_count_solvable;
+  BLESend(BLE_msg);
+
+  digitalWrite(PIN_LED, HIGH);
+  ktomeCAN.send((CAN_ALL_MOD | CAN_MUID_ALL), "A", 1);
+  digitalWrite(PIN_LED, LOW);
+  
+  delay(random(2000) + 1000);
+
   thismillis = millis();
 
   while (gamemode == 3) {
@@ -797,7 +809,7 @@ void stopMessages() {
   digitalWrite(PIN_LED, LOW);
   if (game_win) {
     BLESend("z d");
-  } else {
+  } else if (strike_number == strike_limit) {
     String BLE_msg = "z ";
     for (byte ii = 0; ii < 15; ii++) {
       if ((((strike_culprit & CAN_STD_MOD) << ii) & CAN_STD_MOD ) == 0) {
@@ -806,6 +818,8 @@ void stopMessages() {
       }
     }
     BLESend(BLE_msg);
+  } else {
+    BLESend("z Z");
   }
 }
 

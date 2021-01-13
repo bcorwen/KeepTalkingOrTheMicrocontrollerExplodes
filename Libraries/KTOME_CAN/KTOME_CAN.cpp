@@ -7,7 +7,6 @@ bool KTOME_CAN::start() {
 	pin_rx = 27;
 	pin_tx = 26;
 	success = init();
-
 	return success;
 }
 
@@ -16,7 +15,6 @@ bool KTOME_CAN::start(uint8_t rx, uint8_t tx) {
 	pin_rx = rx;
 	pin_tx = tx;
 	success = init();
-
 	return success;
 }
 

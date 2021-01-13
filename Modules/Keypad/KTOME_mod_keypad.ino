@@ -2,14 +2,14 @@
 //
 //  Keep Talking Or the Microcontroller Explodes!
 //
-//    - bcorwen, 23/12/20
+//    - bcorwen, 3/01/21
 //======================================================================
 //
 //  Module: The Keypad module (SLAVE)
 //
-//  version 0.2.0
+//  version 0.4.0
 //
-//  Goal for this version: Get this thing going!
+//  Goal for this version: Game fully playable
 //
 //======================================================================
 
@@ -29,47 +29,56 @@
 //**********************************************************************
 //#define PIN_PIEZO     GPIO_NUM_2
 #define PIN_LED       GPIO_NUM_12
-#define PIN_BUTTON_1  GPIO_NUM_32
-#define PIN_BUTTON_2  GPIO_NUM_33
 
-long button_1_debounce;
-bool button_1_state;
-long button_2_debounce;
-bool button_2_state;
-long button_debounce = 200;
+// Debug setup for two button game logic test:
+//#define PIN_BUTTON_1  GPIO_NUM_32
+//#define PIN_BUTTON_2  GPIO_NUM_33
+//long button_1_debounce;
+//bool button_1_state;
+//long button_2_debounce;
+//bool button_2_state;
 
-//#define MOD_STATUS_R   GPIO_NUM_32
-//#define MOD_STATUS_G   GPIO_NUM_33
+#define MOD_STATUS_R   GPIO_NUM_32
+#define MOD_STATUS_G   GPIO_NUM_33
+
+//Temp debugging
+byte array_line = 0;
+long array_timer;
 
 // Game
 byte gamemode = 0;
 bool game_ready = false;
 bool holding = false;
 bool game_running = false;
+bool module_defused = false;
+long strike_light_timer;
+long strike_light_flash = 1000;
+bool strike_light_state;
+bool manual_blink = false;
 
 // Timer
 long thismillis;
-byte strikenumber = 0;
+//byte strikenumber = 0;
 
 // Widgets
 //char serial_number[7];
-bool serial_vowel;
-bool serial_odd;
-bool serial_even;
-byte battery_number;
-bool parallel_port;
-bool ind_frk;
-bool ind_car;
+//bool serial_vowel;
+//bool serial_odd;
+//bool serial_even;
+//byte battery_number;
+//bool parallel_port;
+//bool ind_frk;
+//bool ind_car;
 
 // Keypad specific
 #define KEYPAD_B1   GPIO_NUM_15
 #define KEYPAD_B2   GPIO_NUM_2
 #define KEYPAD_B3   GPIO_NUM_0
 #define KEYPAD_B4   GPIO_NUM_4
-#define KEYPAD_LR1   GPIO_NUM_16
-#define KEYPAD_LR2   GPIO_NUM_17
-#define KEYPAD_LR3   GPIO_NUM_5
-#define KEYPAD_LR4   GPIO_NUM_18
+#define KEYPAD_LR4   GPIO_NUM_16
+#define KEYPAD_LR3   GPIO_NUM_17
+#define KEYPAD_LR2   GPIO_NUM_5
+#define KEYPAD_LR1   GPIO_NUM_18
 #define KEYPAD_LG1   GPIO_NUM_19
 #define KEYPAD_LG2   GPIO_NUM_21
 #define KEYPAD_LG3   GPIO_NUM_22
@@ -80,6 +89,16 @@ byte symbol_index[7];
 byte keypad_order[4];
 byte keypad_column_choice;
 bool keypad_track_state;
+
+long button_1_debounce;
+bool button_1_state;
+long button_2_debounce;
+bool button_2_state;
+long button_3_debounce;
+bool button_3_state;
+long button_4_debounce;
+bool button_4_state;
+long button_debounce = 50;
 
 // CAN                      [ Module type ][ID][ unused ]
 
@@ -122,40 +141,108 @@ void setup() {
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, LOW);
 
-  pinMode(PIN_BUTTON_1, INPUT_PULLUP);
-  pinMode(PIN_BUTTON_2, INPUT_PULLUP);
-  button_1_state = digitalRead(PIN_BUTTON_1);
-  button_2_state = digitalRead(PIN_BUTTON_2);
-  Serial.println(button_1_state);
-  Serial.println(button_2_state);
+  pinMode(MOD_STATUS_R, OUTPUT);
+  pinMode(MOD_STATUS_G, OUTPUT);
+  digitalWrite(MOD_STATUS_R, LOW);
+  digitalWrite(MOD_STATUS_G, LOW);
+
+  pinMode(KEYPAD_B1, INPUT_PULLUP);
+  pinMode(KEYPAD_B2, INPUT_PULLUP);
+  pinMode(KEYPAD_B3, INPUT_PULLUP);
+  pinMode(KEYPAD_B4, INPUT_PULLUP);
+  button_1_state = HIGH;
+  button_2_state = HIGH;
+  button_3_state = HIGH;
+  button_4_state = HIGH;
+
+  pinMode(KEYPAD_LR4, OUTPUT);
+  pinMode(KEYPAD_LR3, OUTPUT);
+  pinMode(KEYPAD_LR2, OUTPUT);
+  pinMode(KEYPAD_LR1, OUTPUT);
+  pinMode(KEYPAD_LG4, OUTPUT);
+  pinMode(KEYPAD_LG3, OUTPUT);
+  pinMode(KEYPAD_LG2, OUTPUT);
+  pinMode(KEYPAD_LG1, OUTPUT);
+  digitalWrite(KEYPAD_LR4, LOW);
+  digitalWrite(KEYPAD_LR3, LOW);
+  digitalWrite(KEYPAD_LR2, LOW);
+  digitalWrite(KEYPAD_LR1, LOW);
+  digitalWrite(KEYPAD_LG4, LOW);
+  digitalWrite(KEYPAD_LG3, LOW);
+  digitalWrite(KEYPAD_LG2, LOW);
+  digitalWrite(KEYPAD_LG1, LOW);
 }
 
 void loop() {
 
-  switch (gamemode) {
-    case 0:
-      carPark();
-      break;
-    case 1: // Module poll
-      Serial.println(F("Module search..."));
-      initialisation();
-      carPark();
-      break;
-    case 2: // Game in set-up
-      Serial.println(F("Game set-up..."));
-      //      gameSetup();
-      carPark();
-      break;
-    case 3: // Game running
-      Serial.println(F("Game starting!"));
-      game_running = true;
-      gameRunning();
-      break;
-    case 4: // Game wash-up: stand-by state, showing outcome and waiting for new game to be trigger from phone
-      game_ready = false;
-      carPark();
-      break;
-  }
+//  bool array_to_light[11][8] = {{0, 0, 0, 0, 0, 0, 0, 0},
+//    {0, 0, 0, 1, 0, 0, 0, 0},
+//    {0, 0, 0, 1, 0, 0, 0, 1},
+//    {0, 0, 1, 0, 0, 0, 0, 1},
+//    {0, 0, 1, 0, 0, 0, 1, 0},
+//    {0, 1, 0, 0, 0, 0, 1, 0},
+//    {0, 1, 0, 0, 0, 1, 0, 0},
+//    {1, 0, 0, 0, 0, 1, 0, 0},
+//    {1, 0, 0, 0, 1, 0, 0, 0},
+//    {0, 0, 0, 0, 1, 0, 0, 0},
+//    {0, 0, 0, 0, 0, 0, 0, 0}
+//  };
+//
+//  if (array_timer < millis()) {
+//    array_timer = millis() + 2000;
+//    digitalWrite(KEYPAD_LR1, array_to_light[array_line][0]);
+//    digitalWrite(KEYPAD_LR2, array_to_light[array_line][1]);
+//    digitalWrite(KEYPAD_LR3, array_to_light[array_line][2]);
+//    digitalWrite(KEYPAD_LR4, array_to_light[array_line][3]);
+//    digitalWrite(KEYPAD_LG1, array_to_light[array_line][4]);
+//    digitalWrite(KEYPAD_LG2, array_to_light[array_line][5]);
+//    digitalWrite(KEYPAD_LG3, array_to_light[array_line][6]);
+//    digitalWrite(KEYPAD_LG4, array_to_light[array_line][7]);
+//
+//    Serial.print(array_line);
+//    Serial.print(":");
+//    Serial.print(array_to_light[array_line][0], BIN);
+//    Serial.print(array_to_light[array_line][1], BIN);
+//    Serial.print(array_to_light[array_line][2], BIN);
+//    Serial.print(array_to_light[array_line][3], BIN);
+//    Serial.print(array_to_light[array_line][4], BIN);
+//    Serial.print(array_to_light[array_line][5], BIN);
+//    Serial.print(array_to_light[array_line][6], BIN);
+//    Serial.println(array_to_light[array_line][7], BIN);
+//
+//    array_line ++;
+//    if (array_line >= 11) {
+//      array_line = 0;
+//    }
+//  }
+
+
+    switch (gamemode) {
+      case 0:
+        carPark();
+        break;
+      case 1: // Module poll
+        Serial.println(F("Module search..."));
+        initialisation();
+        carPark();
+        break;
+      case 2: // Game in set-up
+        Serial.println(F("Game set-up..."));
+        gameReset();
+        blackout();
+        carPark();
+        break;
+      case 3: // Game running
+        Serial.println(F("Game starting!"));
+        game_running = true;
+        gameRunning();
+        break;
+      case 4: // Game wash-up: stand-by state, showing outcome and waiting for new game to be trigger from phone
+        game_ready = false;
+        //blackout();// Shut down module lights and "switch off"
+        carPark();
+        break;
+    }
 }
 
 void carPark() {
@@ -165,6 +252,11 @@ void carPark() {
     do {
       CANInbox();
     } while (ktomeCAN.messageWaiting());
+    if (strike_light_timer <= millis() && manual_blink) {
+      strike_light_state = !strike_light_state;
+      digitalWrite(MOD_STATUS_R, strike_light_state);
+      strike_light_timer += strike_light_flash;
+    }
     delay (1);
   }
 }
@@ -193,15 +285,9 @@ void initialisation() {
 // Comm with phone to set up a game
 
 void gameSetup() {
-
   game_ready = false;
-
-  int packet_size;
-
   keypad_setup();
-
   game_ready = true;
-
 }
 
 void keypad_place() {
@@ -215,6 +301,8 @@ void keypad_place() {
   digitalWrite(PIN_LED, HIGH);
   ktomeCAN.send(CAN_MASTER | CAN_ID, CAN_message, 5);
   digitalWrite(PIN_LED, LOW);
+  manual_blink = true;
+  strike_light_timer = millis() + strike_light_flash;
 }
 
 void keypad_setup() {
@@ -347,11 +435,16 @@ byte keypad_picker(byte col_select) {
 // FUNCTIONS: Game Managers
 //**********************************************************************
 
-// Managing timer
-
-// Listening to modules
-
-// Game win/loss
+void gameReset() {
+  module_defused = false;
+  keypad_stage = 0;
+  button_1_state = HIGH;
+  button_2_state = HIGH;
+  button_3_state = HIGH;
+  button_4_state = HIGH;
+  manual_blink = false;
+  strike_light_state = false;
+}
 
 void gameRunning() {
 
@@ -359,51 +452,114 @@ void gameRunning() {
 
     thismillis = millis();
 
-    // Input check
-    if (digitalRead(PIN_BUTTON_1) != button_1_state) {
-      if (button_1_debounce <= thismillis) {
-        button_1_state = digitalRead(PIN_BUTTON_1);
-        button_1_debounce = thismillis + button_debounce;
-        if (button_1_state == LOW) {
-          ktomeCAN.send(CAN_MASTER | CAN_ID, "x", 1);
-          Serial.println("Red button pressed!");
-        }
-      }
+    if (!module_defused) {
+      // Input check
+      inputCheck();
+
+      // Output update
+      strikeUpdate();
+
     }
-    Serial.print("RED button: ");
-    Serial.println(button_1_state);
-    if (digitalRead(PIN_BUTTON_2) != button_1_state) {
-      if (button_2_debounce <= thismillis) {
-        button_2_state = digitalRead(PIN_BUTTON_2);
-        button_2_debounce = thismillis + button_debounce;
-        if (button_2_state == LOW) {
-          ktomeCAN.send(CAN_MASTER | CAN_ID, "d", 1);
-          Serial.println("Green button pressed!");
-        }
-      }
-    }
-    Serial.print("GRN button: ");
-    Serial.println(button_2_state);
-    
-    // Output update
 
     // Send CAN message
     CANInbox();
 
   }
 
+}
 
+void strikeTrigger() {
+  digitalWrite(PIN_LED, HIGH);
+  ktomeCAN.send(CAN_MASTER | CAN_ID, "x", 1);
+  digitalWrite(PIN_LED, LOW);
 
+  strike_light_timer = thismillis + strike_light_flash;
+  digitalWrite(MOD_STATUS_R, HIGH);
+}
+
+void strikeUpdate() {
+  if (thismillis > strike_light_timer) {
+    digitalWrite(MOD_STATUS_R, LOW);
+    // Following 4 lines are for KEYPAD only
+    digitalWrite(KEYPAD_LR1, LOW);
+    digitalWrite(KEYPAD_LR2, LOW);
+    digitalWrite(KEYPAD_LR3, LOW);
+    digitalWrite(KEYPAD_LR4, LOW);
+  }
+}
+
+void defuseTrigger() {
+  digitalWrite(PIN_LED, HIGH);
+  ktomeCAN.send(CAN_MASTER | CAN_ID, "d", 1);
+  digitalWrite(PIN_LED, LOW);
+
+  digitalWrite(MOD_STATUS_G, HIGH);
+
+  module_defused = true;
+}
+
+void blackout() {
+  digitalWrite(PIN_LED, LOW);
+  digitalWrite(MOD_STATUS_R, LOW);
+  digitalWrite(MOD_STATUS_G, LOW);
+  digitalWrite(KEYPAD_LR4, LOW);
+  digitalWrite(KEYPAD_LR3, LOW);
+  digitalWrite(KEYPAD_LR2, LOW);
+  digitalWrite(KEYPAD_LR1, LOW);
+  digitalWrite(KEYPAD_LG4, LOW);
+  digitalWrite(KEYPAD_LG3, LOW);
+  digitalWrite(KEYPAD_LG2, LOW);
+  digitalWrite(KEYPAD_LG1, LOW);
 }
 
 //**********************************************************************
 // FUNCTIONS: Game functions
 //**********************************************************************
 
+void inputCheck() {
+  buttonCheck(KEYPAD_B1, &button_1_state, &button_1_debounce, 0, KEYPAD_LR1, KEYPAD_LG1);
+  buttonCheck(KEYPAD_B2, &button_2_state, &button_2_debounce, 1, KEYPAD_LR2, KEYPAD_LG2);
+  buttonCheck(KEYPAD_B3, &button_3_state, &button_3_debounce, 2, KEYPAD_LR3, KEYPAD_LG3);
+  buttonCheck(KEYPAD_B4, &button_4_state, &button_4_debounce, 3, KEYPAD_LR4, KEYPAD_LG4);
 
+  Serial.print(button_1_state);
+  Serial.print(' ');
+  Serial.print(button_2_state);
+  Serial.print(' ');
+  Serial.print(button_3_state);
+  Serial.print(' ');
+  Serial.println(button_4_state);
+}
 
-
-
+void buttonCheck(byte pin_number, bool *pin_state, long *pin_debounce, byte button_number, byte pin_red, byte pin_green) {
+  if (digitalRead(pin_number) != *pin_state) {
+    if (*pin_debounce <= thismillis) {
+      *pin_state = digitalRead(pin_number);
+      *pin_debounce = thismillis + button_debounce;
+      if (*pin_state == LOW) {
+        Serial.print(pin_number);
+        Serial.println(" button pressed!");
+        if (keypad_order[button_number] == keypad_stage) { // Correct key pressed
+          keypad_stage++;
+          digitalWrite(pin_green, HIGH);
+        } else if (keypad_order[button_number] > keypad_stage) { // Wrong key pressed
+          strikeTrigger();
+          digitalWrite(KEYPAD_LR1, LOW);
+          digitalWrite(KEYPAD_LR2, LOW);
+          digitalWrite(KEYPAD_LR3, LOW);
+          digitalWrite(KEYPAD_LR4, LOW);
+          digitalWrite(pin_red, HIGH);
+        }
+        if (keypad_stage == 4) {
+          defuseTrigger();
+        }
+      } else {
+        Serial.print(pin_number);
+        Serial.println(" button released!");
+      }
+    }
+  }
+}
 
 //**********************************************************************
 // FUNCTIONS: Communications
@@ -427,14 +583,19 @@ void CANInbox() {
     } else if (ktomeCAN.can_msg[0] == 'C' && gamemode == 2) { // Game manual setup call
       Serial.println("This module was asked about it's manual setup!");
       keypad_place();
-      holding = false;
+      //      holding = false;
 
-    } else if (ktomeCAN.can_msg[0] == 'A' && gamemode == 2) { // Game manual setup call
+    } else if (ktomeCAN.can_msg[0] == 'M' && gamemode == 2) { // Game manual check call
+      Serial.println("This module was asked if manual setup was successful!");
+      manual_blink = false;
+      digitalWrite(MOD_STATUS_R, LOW);
+
+    } else if (ktomeCAN.can_msg[0] == 'A' && gamemode == 2) { // Game start
       Serial.println("This module was asked to start the game!");
       //
       gamemode = 3;
       holding = false;
-    } else if (ktomeCAN.can_msg[0] == 'Z') { // Game manual setup call
+    } else if (ktomeCAN.can_msg[0] == 'Z') { // Game stop
       Serial.println("This module was asked to stop the game!");
       gamemode = 4;
       holding = false;
