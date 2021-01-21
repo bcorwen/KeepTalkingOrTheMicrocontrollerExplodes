@@ -8,7 +8,7 @@ Welcome to my Github project blog site, which I'm aiming to keep as a one-stop-s
 
 Please use the links under the title to see more!
 
-    ~ Mike
+~ Mike
 
 ---
 
