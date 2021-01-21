@@ -4,7 +4,11 @@
 
 # Home
 
-Welcome to my Github project site, which I'm aiming to keep as a one-stop-shop for all to understand what I'm building, follow along with regular progress updates or try to ~~steal~~ learn from my lessons!
+Welcome to my Github project blog site, which I'm aiming to keep as a one-stop-shop for all to understand what I'm building, follow along with regular progress updates or try to learn as I learn!
+
+Please use the links under the title to see more!
+
+  - Mike
 
 ---
 
