@@ -12,4 +12,4 @@ Please use the links under the title to see more!
 
 ---
 
-![KTANE photo](https://i.imgur.com/YTiykoY.jpg)
+![KTANE photo](https://i.imgur.com/rBVHPgn.jpg)
