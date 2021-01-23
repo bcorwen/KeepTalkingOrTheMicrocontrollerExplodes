@@ -36,7 +36,7 @@ I started building a wooden case for the modules which did the job but it was a 
 
 In order to try to get the most out of the Mega, I refined the code to slim it down as much as possible and tried to extend the limited number of I/O pins to be able to maximise the amount of supported modules at one time. I hadn't done much soldering at this point, but designed two boards to help increase the number of I/Os and make that plug-and-play aspect a little easier.
 > ![One of the socket boards](https://i.imgur.com/orsPxDr.png)
-> One of the socket plug-and-play boards
+> One of the socket plug-and-play boards (red pins denote power lines, green pins are inputs to the shift registers from other modules, blue pins are outputs from the shift registers to the Mega, magenta pins are the common lines to drive LCDs and cyan pins are individual chip selects so only a specific LCD is edited at any one time)
 
 After discovering shift registers, I reimplemented the code to read in any input and push out and output through a register. Then devised a scheme where reigsters would all be chained to each other and divided into nibbles. So one shift in register could support the 4 buttons for Simon Says and 4 buttons from Keypad, for example. This way, the three I/Os needed to drive the chain of 3 registers could handle 24 input lines.
 I also soldered a line of pins to act as an LCD bus, realising I could use many LCDs across the modules. Breaking out the chip select, I could keep the other lines common.
