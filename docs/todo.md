@@ -2,7 +2,7 @@
 
 ---
 
-# Current tasks
+# Current Tasks
 
 - [ ] : Refine sound cues by adding local back-up timer to widget ESP
 - [ ] : Alter sound amp circuit to make full range of input voltage range
@@ -10,7 +10,7 @@
 
 ---
 
-# To-do List
+# Project To-do List
 
 ## Programming
 
