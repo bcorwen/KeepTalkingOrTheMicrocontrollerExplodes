@@ -8,12 +8,17 @@ I started this project around February 2020, going down the route of one Arduino
 
 The current plan is to have each module run with its own ESP32 microcontroller, communicating with each other using the CAN protocol. The modules will be plug-and-play into the bomb chassis, allowing you to bomb your own challenge. The parts will be built up with electronics which can provide the same functionality and aesthetics as the game, allowing the original manual to be used, with use of a 3D printer which is a new investment for me. The game will be customisable through a companion phone app, which can set things such as hardcore mode or the game timer via a BLE connection.
 
-## Current progress and to-do
+## Current tasks
+- [ ] Refine sound cues by adding local back-up timer to widget ESP
+- [ ] Alter sound amp circuit to make full range of input voltage range
+- [ ] Convert previously coded modules to work on ESP and interact with CAN bus (Button, Wires and Simon says)
+
+## Project to-do list
 ### Programming
 - [x] Basic game logic common to all modules
 - [x] CAN communication between modules
 - [x] BLE communication between Master ESP32 and phone app
-- [ ] Complete timer (Master) module
+- [x] Complete timer (Master) module
 - [ ] Complete standard modules
 - [ ] Complete needy modules
 ### Design
