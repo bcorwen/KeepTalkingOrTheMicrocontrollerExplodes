@@ -19,6 +19,7 @@ The Arduino Mega was a reasonable microcontroller to run the game. It had enough
 The starter kit had a good variety of components: LCD screens, LED segment displays, single LEDs, buttons and switches. I bought in a few other parts, thinking ahead to the look and feel of the modules, and began piecing things together.
 > ![Early photo of the prototype](https://i.imgur.com/an2r3ZR.jpg)
 > An early photo of the prototype
+
 The code was a mess and I was struggling with a few basics, but thanks to some good tutorials and libraries I managed to create a 4 module prototype on that Mega:
 * Timer: with a nice big time display, two LED strike lights and a piezobuzzer for all sound effects (this was difficult to organise a priority system for more important sounds (strike buzzer) to play over less important ones (clock ticking)!)
 * Wires: taking a guess at the generating algorithm, this would create a 3-6 wire sequence for the user to set-up before a game. The Mega would check inputs to see if the correct wires were (dis)connected to know it was properly set-up.
