@@ -9,7 +9,7 @@ I'm aiming to copy the Keep Talking And Nobody Explodes (KTANE) videogame as clo
 I started this project around February 2020. The Christams before, I received an Arduino starter kit which I had a brief play with before wondering what I could do this it. The tutorials were interesting but it was quite a slow introduction and I wanted to do something with a bit more meaning than just learning how to use different electronic components. That's when I remembered about KTANE, a game a loved, which is, when you break it down, just a series of buttons, wires and LEDs. I figured it would be complicated and I wouldn't be able to make a perfect replica but it would be a great learning experience and might be a little entertaining when built, rather than being pulled apart immediately or sitting in a drawer somewhere.
 
 > ![Screenshot of Keep Talking](https://i.imgur.com/fZXojRZ.jpg)
-> Screenshot of "Keep Talking and Nobody Explodes" videogame.
+> Screenshot of the "Keep Talking and Nobody Explodes" videogame.
 
 Originally, I was going down the route of one Arduino Mega controlling the bomb. By May 2020, I completed a prototype of 3 - 4 modules plus the timer, before deciding the change my approach given what I had learned from the prototype. The prototype can be viewed [here](https://www.youtube.com/watch?v=qZbycguCcf4)!
 
