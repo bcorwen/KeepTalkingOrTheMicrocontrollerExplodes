@@ -4,11 +4,13 @@
 
 # Current tasks
 
-- [ ]   WIP...
+- [ ]   Refine sound cues by adding local back-up timer to widget ESP
+- [ ]   Alter sound amp circuit to make full range of input voltage range
+- [ ]   Convert previously coded modules to work on ESP and interact with CAN bus (Button, Wires and Simon says)
 
 ---
 
-#To-do List
+# To-do List
 
 ## Programming
 
