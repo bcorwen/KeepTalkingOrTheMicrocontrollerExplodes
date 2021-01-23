@@ -26,6 +26,7 @@ The code was a mess and I was struggling with a few basics, but thanks to some g
 * Button: after learning how to do debouncing, a relatively simple module to create.
 * Simon Says: the arcade buttons really completed the look, but this was a relatively tricky module which needed smart state tracking and timing for lighting up the buttons in sequence.
 * Keypad: this was only half-implemented but playable, and made use of the custome character creation of the LCD screen used for setup to display the keypad symbols.
+
 > ![Keypad setup screen](https://i.imgur.com/2fTtbNI.jpg)
 > Using the custom characters of the LCD to setup the Keypad module
 
