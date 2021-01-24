@@ -54,7 +54,7 @@ The Arduino Mega was a reasonable microcontroller to run the game. It had enough
 The starter kit had a good variety of components: LCD screens, LED segment displays, single LEDs, buttons and switches. I bought in a few other parts, thinking ahead to the look and feel of the modules, and began piecing things together.
 
 > ![Early photo of the prototype](https://i.imgur.com/an2r3ZR.jpg)
-> An early photo of the prototype
+An early photo of the prototype
 
 The code was a mess and I was struggling with a few basics, but thanks to some good tutorials and libraries I managed to create a 4 module prototype on that Mega:
 * Timer: with a nice big time display, two LED strike lights and a piezobuzzer for all sound effects (this was difficult to organise a priority system for more important sounds (strike buzzer) to play over less important ones (clock ticking)!)
@@ -64,7 +64,7 @@ The code was a mess and I was struggling with a few basics, but thanks to some g
 * Keypad: this was only half-implemented but playable, and made use of the custome character creation of the LCD screen used for setup to display the keypad symbols.
 
 > ![Keypad setup screen](https://i.imgur.com/2fTtbNI.jpg)
-> Using the custom characters of the LCD to setup the Keypad module
+Using the custom characters of the LCD to setup the Keypad module
 
 ### Reaching the limit
 I originally wanted to create as much as I possibly could of the game, emulating the 14 modules as close as I physically could, plug-and-play modules, and the ability to have 6 or 12 modules in play at once. This was beginning to look like a huge stretch for one Mega to handle.
@@ -72,14 +72,15 @@ I originally wanted to create as much as I possibly could of the game, emulating
 I started building a wooden case for the modules which did the job but it was a struggle with hand tools and I had no ability to use a makerspace in the start of the Covid lockdown. Then I moved the electronics into the case with a forward-looking view to achieving more than those 4 modules.
 
 > ![Button in the wooden case](https://i.imgur.com/IVS5SpJ.jpg)
-> The Button module being tested in its wooden case
+The Button module being tested in its wooden case
+
 > ![The modules in their wooden cases](https://i.imgur.com/VMsLNAq.jpg)
-> The finished modules
+The finished modules
 
 In order to try to get the most out of the Mega, I refined the code to slim it down as much as possible and tried to extend the limited number of I/O pins to be able to maximise the amount of supported modules at one time. I hadn't done much soldering at this point, but designed two boards to help increase the number of I/Os and make that plug-and-play aspect a little easier.
 
 > ![One of the socket boards](https://i.imgur.com/orsPxDr.png)
-> One of the socket plug-and-play boards (red pins denote power lines, green pins are inputs to the shift registers from other modules, blue pins are outputs from the shift registers to the Mega, magenta pins are the common lines to drive LCDs and cyan pins are individual chip selects so only a specific LCD is edited at any one time)
+One of the socket plug-and-play boards (red pins denote power lines, green pins are inputs to the shift registers from other modules, blue pins are outputs from the shift registers to the Mega, magenta pins are the common lines to drive LCDs and cyan pins are individual chip selects so only a specific LCD is edited at any one time)
 
 After discovering shift registers, I reimplemented the code to read in any input and push out and output through a register. Then devised a scheme where reigsters would all be chained to each other and divided into nibbles. So one shift in register could support the 4 buttons for Simon Says and 4 buttons from Keypad, for example. This way, the three I/Os needed to drive the chain of 3 registers could handle 24 input lines.
 
