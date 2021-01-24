@@ -1,4 +1,4 @@
-[Dev blog](devblog.md) | [Project aims and goals](goals.md) | [Project to-do](todo.md) | [KTANE IRL Discord server](https://discord.com/channels/711013430575890432)
+[Dev blog](devblog.md) ¦ [Project aims and goals](goals.md) ¦ [Project to-do](todo.md) ¦ [Progress playlist](https://www.youtube.com/playlist?list=PLJqFvAhkcSkkks42zClG5WlvO1khFZCKK) ¦ [KTANE IRL Discord server](https://discord.com/channels/711013430575890432)
 
 ---
 
