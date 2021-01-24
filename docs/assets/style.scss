@@ -2,9 +2,16 @@
 ---
 
 @import "{{ site.theme }}";
+
 .wrapper {
-  max-width:950px;
+  max-width:800px;
   margin:0 auto;
-  position:relative;
   padding: 0 20px;
+}
+
+section {
+  max-width:800px;
+  padding: 0px 0px 50px 0px;
+  margin: 20px 0;
+  margin-top: 70px;
 }
