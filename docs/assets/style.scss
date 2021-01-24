@@ -1,15 +1,5 @@
 ---
 ---
+$content-width: 125%;
 
 @import "{{ site.theme }}";
-
-#header {
-  width: 125%;
-  nav {
-    max-width: 950px;
-  }
-}
-
-section {
-  max-width:950px;
-}
