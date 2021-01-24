@@ -1,5 +1,10 @@
 ---
 ---
-$max-width: 950px;
 
 @import "{{ site.theme }}";
+.wrapper {
+  max-width:950px;
+  margin:0 auto;
+  position:relative;
+  padding: 0 20px;
+}
