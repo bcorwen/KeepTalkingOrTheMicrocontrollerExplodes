@@ -13,6 +13,7 @@ This is another long overdue update covering about May to July 2020, after retir
 The initial move to the ESP32 was relatively straightforward; I could continue scripting through the Arduino IDE, there were only a few libraries that would need to be updated for the ESP32 board, and by-and-large the ESP32 behavioured similarly to the Arduino. The only big change was the operating voltage of 3.3V to keep an eye on, however this was trivial in the early days when I only had a couple of switches and LEDs to power.
 
 > ![ESP32 NodeMCU](https://i.imgur.com/CDSgzhz.jpg)
+>
 > The ESP32 (NodeMCU board)
 
 However, there were big advantages to the ESP32 that many people explained on the [KTANE IRL Discord](https://discord.com/channels/711013430575890432). The ESP32 has much more memory available to use, directly solving one of the biggest problems with the Arduino version. An ESP could store a lot of big libraries, use lots of Strings and structs, and store much more to PROGMEM. My code no longer *needed* to be so lean to make sure there was space so in turn could be quicker and easier to read.
