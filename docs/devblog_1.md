@@ -29,10 +29,10 @@ The starter kit had a good variety of components: LCD screens, LED segment displ
 > An early photo of the prototype
 
 The code was a mess and I was struggling with a few basics, but thanks to some good tutorials and libraries I managed to create a 4 module prototype on that Mega:
-* Timer: with a nice big time display, two LED strike lights and a piezobuzzer for all sound effects (this was difficult to organise a priority system for more important sounds (strike buzzer) to play over less important ones (clock ticking)!)
-* Wires: taking a guess at the generating algorithm, this would create a 3-6 wire sequence for the user to set-up before a game. The Mega would check inputs to see if the correct wires were (dis)connected to know it was properly set-up.
+* [Timer](https://www.youtube.com/watch?v=InTcSh50ikU): with a nice big time display, two LED strike lights and a piezobuzzer for all sound effects (this was difficult to organise a priority system for more important sounds (strike buzzer) to play over less important ones (clock ticking)!)
+* [Wires](https://www.youtube.com/watch?v=InTcSh50ikU): taking a guess at the generating algorithm, this would create a 3-6 wire sequence for the user to set-up before a game. The Mega would check inputs to see if the correct wires were (dis)connected to know it was properly set-up.
 * Button: after learning how to do debouncing, a relatively simple module to create.
-* Simon Says: the arcade buttons really completed the look, but this was a relatively tricky module which needed smart state tracking and timing for lighting up the buttons in sequence.
+* [Simon Says](https://www.youtube.com/watch?v=qT8n0Lo1gPQ): the arcade buttons really completed the look, but this was a relatively tricky module which needed smart state tracking and timing for lighting up the buttons in sequence.
 * Keypad: this was only half-implemented but playable, and made use of the custome character creation of the LCD screen used for setup to display the keypad symbols.
 
 > ![Keypad setup screen](https://i.imgur.com/2fTtbNI.jpg)
@@ -61,6 +61,8 @@ In order to try to get the most out of the Mega, I refined the code to slim it d
 After discovering shift registers, I reimplemented the code to read in any input and push out and output through a register. Then devised a scheme where reigsters would all be chained to each other and divided into nibbles. So one shift in register could support the 4 buttons for Simon Says and 4 buttons from Keypad, for example. This way, the three I/Os needed to drive the chain of 3 registers could handle 24 input lines.
 
 I also soldered a line of pins to act as an LCD bus, realising I could use many LCDs across the modules. Breaking out the chip select, I could keep the other lines common.
+
+I was left with a reasonably impressive [first attempt](https://www.youtube.com/watch?v=qZbycguCcf4), with a game consisting of 4 of the modules, which physically resembled the videogame and played the same.
 
 Despite all of this, it was obvious that the Mega would really struggle to get much further, and so I needed to make a choice on where to go next. I took the difficult decision to scrap the Mega prototype and go down a different path, one which could get me much closer to the original game.
 
