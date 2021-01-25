@@ -7,7 +7,7 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 ---
 
-[Next post: Moving to the ESP32](devblog_1.md)
+[Next post: Moving to the ESP32](devblog_2.md)
 
 ## 2021/01/23 - Origins
 It's been about one year since I started this project, and so it feels like I should get this blog going with a recap of the journey so far. For the first entry, I'll revisit the Arduino prototype.
@@ -70,4 +70,4 @@ He pointed me further down the rabbit hole, suggesting other microcontrollers an
 
 The ESP32 version took shape and work began again...
 
-[Next post: Moving to the ESP32](devblog_1.md)
+[Next post: Moving to the ESP32](devblog_2.md)
