@@ -40,4 +40,8 @@ This manual setup was inplemented crudely on an LCD attached to the Mega in the 
 
 While that idea was forming, I imported the Timer and Keypad modules pretty easily. And so it was time to start on the comms...
 
+> ![ESP32 timer and keypad modules](https://i.imgur.com/2LLJpaU.jpg)
+> 
+> The Timer and Keypad build using ESP32s
+
 [Prev post: Origins](devblog_1.md)
