@@ -7,7 +7,7 @@
 - [x] : Refine sound cues by adding local back-up timer to widget ESP
 - [ ] : Alter sound amp circuit to make full range of input voltage range
 - [x] : Tweek CAN setup (possibly pull out into another header or otherwise make simpler to define)
-- [ ] : Insert game over effects (shut down all lights and flash timer on success, or flash all lights briefly before going dark on failure)
+- [x] : Insert game over effects (shut down all lights and flash timer on success, or flash all lights briefly before going dark on failure)
 - [ ] : Distil Keypad module down to a generic template as basis for other modules
 - [ ] : Convert previously coded modules to work on ESP and interact with CAN bus (Button, Wires and Simon says)
 
