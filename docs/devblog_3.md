@@ -41,7 +41,7 @@ Alongside the ID, a device may optionally register a mask of the same length as 
 
 Example 1: Basic ID matching
 
-    | ID | Comment
+ \  | ID | Comment
 --- | --- | -------
 Message | 0b00010011110 | -
 Device 1 ID | 0b00010011010 | 9th bit mismatch: message ignored
@@ -49,19 +49,19 @@ Device 2 ID | 0b00010011110 | All bits match: message read
 
 Example 2: IDs and masks
 
-    | ID | Comment
+ \  | ID | Comment
 --- | --- | -------
 Message | 0b00010011110 | -
 Device 1 mask | 0b11111111111 | All bits compared
 Device 1 ID | 0b00010011010 | 9th bit mismatch: message ignored
 
-    | ID | Comment
+ \  | ID | Comment
 --- | --- | -------
 Message | 0b00010011110 | -
 Device 2 mask | 0b11111110000 | First 7 bits compared, last 4 ignored
 Device 2 ID | 0b00010011010 | 9th bit mismatch ignored: message read
 
-    | ID | Comment
+ \  | ID | Comment
 --- | --- | -------
 Message | 0b00010011110 | -
 Device 3 mask | 0b00000000000 | No bits compared!
