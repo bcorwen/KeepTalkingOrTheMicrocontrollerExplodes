@@ -7,7 +7,7 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 ---
 
-[Prev post: Origins](devblog_1.md)
+[Prev post: Origins](devblog_1.md) | [Next post: Communications (part 1): CAN](devblog_3.md)
 
 ## 2021/01/24 - Moving to the ESP32 and the new bomb structure
 This is another long overdue update covering about May to July 2020, after retiring the prototype to move from using the Arduino Mega to ESP32s. It's a short one but covers a lot of the considerations of moving microcontrollers.
@@ -38,10 +38,10 @@ One additional consideration was brewing in the back of my mind: how to setup mo
 
 This manual setup was inplemented crudely on an LCD attached to the Mega in the prototype, but this was always a temporary solution and a much better one would have to be found now I was aiming a little higher with the quality of the game. I wondered how easy it would be to not show this info directly on a display of some sort which would need to be physically engineered into the module, but instead fetching that info digitally - much like using the serial monitor while debugging the ESP32 sketches.
 
-While that idea was forming, I imported the Timer and Keypad modules pretty easily. And so it was time to start on the comms...
+While that idea was forming, I began importing the Timer and Keypad modules pretty easily. And so it was time to start on the comms...
 
 > ![ESP32 timer and keypad modules](https://i.imgur.com/2LLJpaU.jpg)
 > 
 > The Timer and Keypad build using ESP32s
 
-[Prev post: Origins](devblog_1.md)
+[Prev post: Origins](devblog_1.md) | [Next post: Communications (part 1): CAN](devblog_3.md)
