@@ -35,38 +35,52 @@ Looking into CAN, it appeared a perfect fit. Any microcontroller could initiate 
 So a little more on how CAN works, which will set the scene for how I used the protocol to send messages for KTOME:
 
 #### IDs and masks
-Devices connected to a CAN bus will have an ID: an 11-bit string (or a 29-bit string when "extended frame" IDs are used). Individual messages are sent with an ID attached, and the connected device will filter out any messages which do not match the ID exactly. Hmm ok... well how can a message with one ID be received by multiple devices with different IDs?
+Devices connected to a CAN bus will have an ID: an 11-bit string (or a 29-bit string when "extended frame" IDs are used). Individual messages are sent with an ID attached, and the connected device will filter out any messages which do not match the ID exactly - a bit-wise AND operation. Essentially:
+```
+if (message_id == device_id) {
+  // Message is accepted
+}
+```
+Hmm ok... well how can a message with one ID be received by multiple devices with different IDs?
 
-Alongside the ID, a device may optionally register a mask of the same length as the ID. This bit-mask acts as a filter over the message. Any bits marked with a 0 in the mask will not be checked when comparing the message ID with the device ID.
+Alongside the ID, a device may optionally register a mask of the same length as the ID. This bit-mask acts as a filter over the message. Any bits marked with a 0 in the mask will not be checked when comparing the message ID with the device ID. So now the pseudo-code would be:
+```
+if ((message_id & device_mask) == (device_id & device_mask)) {
+  // Message is accepted
+}
+```
 
 Example 1: Basic ID matching
 
-Source | ID | Comment
---- | --- | -------
-Message | 0b00010011110 | -
+Source | ID | IDs equal?
+--- | --- | ------- 
+Message | 0b00010011110 | - 
 Device 1 ID | 0b00010011010 | 9th bit mismatch: message ignored
 Device 2 ID | 0b00000011110 | 4th bit mismatch: message ignored
 Device 3 ID | 0b00010011110 | All bits match: message read
 
 Example 2: IDs and masks
 
-Source | ID | Comment
---- | --- | -------
-Message | 0b00010011110 | -
-Device 1 mask | 0b11111111111 | All bits compared
-Device 1 ID | 0b00010011010 | 9th bit mismatch: message ignored
+Source | ID | mask | ID & mask | IDs equal?
+--- | --- | --- | ------- | --- 
+Message | 0b00010011110 | - | 0b00010011110 | - 
+Device 1 ID | 0b00010011010 | 0b11111111111 | 0b00010011010 | 9th bit mismatch: message ignored
 
-Source | ID | Comment
---- | --- | -------
-Message | 0b00010011110 | -
-Device 2 mask | 0b11111110000 | First 7 bits compared, last 4 ignored
-Device 2 ID | 0b00010011010 | 9th bit mismatch ignored: message read
+This case was the same as not setting a mask, as every bit is compared.
 
-Source | ID | Comment
---- | --- | -------
-Message | 0b00010011110 | -
-Device 3 mask | 0b00000000000 | No bits compared!
-Device 3 ID | 0b11101011000 | Message and device IDs very different but message read!
+Source | ID | mask | ID & mask | IDs equal?
+--- | --- | --- | ------- | --- 
+Message | 0b00010011110 | - | 0b00010010000 | - 
+Device 2 ID | 0b00010011010 | 0b11111110000 | 0b00010010000 | All bits match: message read
+
+The last 4 bits are not compared, enabling this device with a different ID to still accept this message.
+
+Source | ID | mask | ID & mask | IDs equal?
+--- | --- | --- | ------- | --- 
+Message | 0b00010011110 | - | 0b00000000000 | - 
+Device 3 ID | 0b00010011010 | 0b00000000000 | 0b00000000000 | All bits match: message read
+
+An all-zero mask will allow the device to read every message, no matter its ID!
 
 #### Message characteristics
 
