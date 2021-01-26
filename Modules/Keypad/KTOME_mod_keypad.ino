@@ -7,7 +7,7 @@
 //
 //  Module: The Keypad module (SLAVE)
 //
-//  version 0.4.0
+//  version 0.5.0
 //
 //  Goal for this version: Game fully playable
 //

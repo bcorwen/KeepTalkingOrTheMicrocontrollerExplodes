@@ -7,7 +7,7 @@
 //
 //  Module: Timer (MASTER)
 //
-//  version 0.4.0
+//  version 0.5.0
 //
 //  Goal for this version: Complete game logic and common comms
 //
@@ -32,7 +32,6 @@
 //**********************************************************************
 //#define PIN_PIEZO     GPIO_NUM_2
 #define PIN_LED       GPIO_NUM_12
-#define PIN_BUTTON    GPIO_NUM_25
 #define PIN_STRIKE_1  GPIO_NUM_18
 #define PIN_STRIKE_2  GPIO_NUM_19
 
@@ -52,9 +51,9 @@ byte module_count_solvable = 0;
 bool module_solved_array[12];
 
 // Timer
-long timeleft;
-long gamelength = 300000; //seconds
-long thismillis;
+int32_t timeleft;
+int32_t gamelength = 300000; //seconds
+int32_t thismillis;
 //long delta_t;
 String timestr = "----";
 String timestr_prev = "----";
@@ -64,12 +63,12 @@ byte strike_limit = 3;
 bool strike_flag = false;
 int strike_culprit; // NEW VARIABLE - track the last module which caused a strike, for debrief
 char sec_tick_over; // DELETE?
-long buzz_timer;
+int32_t buzz_timer;
 byte time_scale; // Quadruple the time scale: 4 = 1x speed (normal), 5 = 1.25x speed (1 strike), etc...
-long blinktime;
-long blinkperiod = 250; // Milliseconds
+int32_t blinktime;
+int32_t blinkperiod = 250; // Milliseconds
 bool blinkbool;
-long buzzerinterrupt;
+int32_t buzzerinterrupt;
 
 Adafruit_7segment timerdisp = Adafruit_7segment(); // Default pins: I2C SCL = GPIO22, I2C SDA = GPIO21
 
@@ -84,19 +83,19 @@ bool port_serial;
 bool ind_frk;
 bool ind_car;
 
-char ind_names[11][4] = {
-  {"SND"},
-  {"CLR"},
-  {"CAR"},
-  {"IND"},
-  {"FRQ"},
-  {"SIG"},
-  {"NSA"},
-  {"MSA"},
-  {"TRN"},
-  {"BOB"},
-  {"FRK"}
-};
+//char ind_names[11][4] = {
+//  {"SND"},
+//  {"CLR"},
+//  {"CAR"},
+//  {"IND"},
+//  {"FRQ"},
+//  {"SIG"},
+//  {"NSA"},
+//  {"MSA"},
+//  {"TRN"},
+//  {"BOB"},
+//  {"FRK"}
+//};
 
 // CAN                      [ Module type ][    ID   ][>]unused
 #define CAN_ID            0b10000000000000000000000000000 // ID for Master (timer)
@@ -145,7 +144,8 @@ class MyCallbacks: public BLECharacteristicCallbacks {
           float temp_float;
           temp_holder = BLE_value.substring(2);
           temp_float = temp_holder.toFloat();
-          gamelength = long(temp_float * 60000);
+          //          gamelength = long(temp_float * 60000);
+          gamelength = long(temp_float * 60000000);
           BLE_state = "ok";
         } else if (BLE_value.substring(0, 2) == "h=") { // Hardcore selector
           if (BLE_value.substring(2) == "0") {
@@ -171,24 +171,11 @@ class MyCallbacks: public BLECharacteristicCallbacks {
           gamemode = 4;
           holding = false;
 
-          //        } else if (BLE_value == "ri") { // Request master to re-run initialisation of connect modules
-          //          BLE_state = "ok";
-          //          gamemode = 0;
-          //        } else if (BLE_value == "mms") { // Start manual module setup
-          //          BLE_state = "b 2 3"; // Space=separated list of manual setup instructions: first char is letter coded to module type, then numbers corresponding to app array
-          //        } else if (BLE_value == "?") { // Check/confirm manual setup
-          //          BLE_state = "ok"; // "!" if incorrect on check, otherwise send next manual module setup as above; "ok" when completed setup for all modules
-          //        } else if (BLE_value == "gs") { // Start game
-          //          game_ready = true;
-          //          BLE_state = "ok";
-          //        } else if (BLE_value == "check") { // LEGACY - unused
-          //          BLE_state = "";
-          //          // Add in statements to change BLE_state, which will be sent back to phone
-          //          BLE_state = "timer = " + char(gamelength);
+
         }
         //        pCharacteristic->setValue(BLE_state.c_str()); // Return status
-        Serial.print("BLE_state = ");
-        Serial.println(BLE_state);
+        //        Serial.print("BLE_state = ");
+        //        Serial.println(BLE_state);
       }
     }
 };
@@ -235,7 +222,6 @@ void setup() {
 
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, LOW);
-  pinMode(PIN_BUTTON, INPUT_PULLUP);
   pinMode(PIN_STRIKE_1, OUTPUT);
   digitalWrite(PIN_STRIKE_1, LOW);
   pinMode(PIN_STRIKE_2, OUTPUT);
@@ -381,13 +367,14 @@ void phoneSetup() {
 
   game_ready = false;
 
-  widgetGenerate(); // Generate widgets
   serialGenerate(); // Generate serial #
+  widgetGenerate(); // Generate widgets
 
   char CAN_message[9];
   CAN_message[0] = 'W';
   if (serial_vowel) {
     CAN_message[1] = '1';
+  } else {
     CAN_message[1] = '0';
   }
   if (serial_odd) {
@@ -533,57 +520,88 @@ void moduleCheck() {
   }
 }
 
-void widgetGenerate () {
-  byte widget_number = random(2) + 4;
-  battery_number = random(3) + random(3); // Number from 0-4, with a bias towards 2
+void widgetGenerate() {
 
-  //  if (widget_number > battery_number) {
-  //    ind_number = random(1 + widget_number - battery_number);
-  //    port_number = widget_number - (battery_number + ind_number);
-  //  } else {
-  //    port_number = 0;
-  //    ind_number = 0;
-  //  }
-
-  ind_car = false;
-  ind_frk = false;
+  battery_number = 0;
   port_parallel = false;
   port_serial = false;
+  ind_frk = false;
+  ind_car = false;
 
-  //  bool isthisacopy = false;
-  //
-  //  for (byte i = 0; i < widget_number; i++) {
-  //    if (i < battery_number) { // Add battery
-  //      widget_types[i] = random(2); // AA or D
-  //    } else if (i < (battery_number + ind_number)) { // Add indicator
-  //      if (i > 0) {
-  //        do {
-  //          isthisacopy = false;
-  //          widget_types[i] = random(23) + 10; // All inds (11 types), off and on (x2)
-  //          for (byte j = 0; j < i; j++) {
-  //            if (widget_types[i] % 2 == widget_types[j] % 2) {
-  //              isthisacopy = true;
-  //            }
-  //          }
-  //        } while (isthisacopy = true);
-  //        if (widget_types[i] == 15) {
-  //          ind_car = true; // 14 = off, 15 = on
-  //        } else if (widget_types[i] == 17) {
-  //          ind_frk = true; // 16 = off, 17 = on
-  //        }
-  //      }
-  //    } else { // Add port
-  //      widget_types[i] = random(4) + 40; // Parallel, serial, other
-  //      if (widget_types[i] == 40) {
-  //        parallel_port = true;
-  //      }
-  //    }
-  //    if (i > 0) {
-  //      lcd.print(":");
-  //    }
-  //    //    lcd.sprintf(widget_types[i], "%02d");
-  //    lcd.print(widget_types[i], DEC);
-  //  }
+  byte widget_total = 5;
+  byte die_roll;
+  byte list_indicators[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}; // SND, CLR, CAR, IND, FRQ, SIG, NSA, MSA, TRN, BOB, FRK
+  byte selection_pick;
+
+  String BLE_msg = "c e";
+
+  for (byte i = 0; i < widget_total; i++) {
+    die_roll = random(0, 100);
+    selection_pick = 0;
+    if (die_roll < 30) { // 30% chance of an indicator
+      do {
+        selection_pick = list_indicators[random(0, 11)]; // Pick from the indicator list
+      } while (selection_pick == 0); // Try again if this has already been selected previously
+      list_indicators[selection_pick] = 0;
+      if (die_roll < 10) {
+        selection_pick += 96;
+      } else {
+        selection_pick += 64;
+      }
+      if (selection_pick == 24) { // CAR lit
+        ind_car = true;
+      } else if (selection_pick == 32) { // FRK lit
+        ind_frk = true;
+      }
+      BLE_msg = BLE_msg + " i" + char(selection_pick);
+    } else if (die_roll < 65) { // 35% chance of a port
+      //      if (random(0, 2) < 1) { // Serial/parallel ports
+      if (random(0, 10) < 6) { //60% chance of parallel
+        selection_pick += 2;
+        port_parallel = true;
+      }
+      if (random(0, 10) < 5) { //50% chance of a serial
+        selection_pick += 1;
+        port_serial = true;
+      }
+      //      } else { // Random ports
+      //        selection_pick = 4;
+      //      }
+      BLE_msg = BLE_msg + " p" + selection_pick;
+    } else { // 35% chance of a battery
+      if (random(0, 10) < 5) { //50% chance of a D battery
+        selection_pick = 1;
+        battery_number += 1;
+      } else {
+        battery_number += 2;
+      }
+      BLE_msg = BLE_msg + " b" + selection_pick;
+    }
+  }
+
+  Serial.println(BLE_msg);
+  BLESend(BLE_msg);
+
+  Serial.print("Serial port: ");
+  Serial.println(port_serial);
+  Serial.print("Parallel port: ");
+  Serial.println(port_parallel);
+  Serial.print("Lit CAR: ");
+  Serial.println(ind_car);
+  Serial.print("Lit FRK: ");
+  Serial.println(ind_frk);
+  Serial.print("Batteries: ");
+  Serial.println(battery_number);
+
+  manual_check = false;
+  carPark(); // Wait for user to complete manual setup
+  if (manual_check) { // User states this module is setup
+    Serial.println("Widget setup confirmed!");
+  } else {
+    Serial.println("Expecting module check, but received another message!");
+    //    manual_error = true;
+    //    break;
+  }
 }
 
 void serialGenerate () {
@@ -615,19 +633,19 @@ void serialGenerate () {
   char can_msg[8];
   can_msg[0] = 'S';
   for (byte i = 0; i < 6; i++) {
-     can_msg[i+1] = serial_number[i];
+    can_msg[i + 1] = serial_number[i];
   }
-  can_msg[7]='\0';
+  can_msg[7] = '\0';
   digitalWrite(PIN_LED, HIGH);
   ktomeCAN.send(CAN_WIDGETS, can_msg, 7);
   digitalWrite(PIN_LED, LOW);
 
-  //    Serial.print("Vowels?: ");
-  //    Serial.println(serial_vowel);
-  //    Serial.print("Even?: ");
-  //    Serial.println(serial_odd);
-  //    Serial.print("Odds?: ");
-  //    Serial.println(serial_even);
+  Serial.print("Vowels?: ");
+  Serial.println(serial_vowel);
+  Serial.print("Even?: ");
+  Serial.println(serial_odd);
+  Serial.print("Odds?: ");
+  Serial.println(serial_even);
 }
 
 char char_generator(bool alphanum_type) {
@@ -665,7 +683,7 @@ char char_generator(bool alphanum_type) {
 void gameReset() {
 
   game_win = false;
-
+  game_running = false;
   //Set timer
   strike_number = 0;
   if (hardcore_mode) {
@@ -692,10 +710,12 @@ void gameRunning() {
   digitalWrite(PIN_LED, HIGH);
   ktomeCAN.send((CAN_ALL_MOD | CAN_MUID_ALL), "A", 1);
   digitalWrite(PIN_LED, LOW);
-  
+
   delay(random(2000) + 1000);
 
-  thismillis = millis();
+  game_running = true;
+  //  thismillis = millis();
+  thismillis = micros();
 
   while (gamemode == 3) {
     // Loop through all checks to do in a single "frame" when the game is in progress
@@ -725,9 +745,20 @@ void gameRunning() {
 
 void timerCalc() {
 
-  long delta_t = millis() - thismillis;
+  //  int32_t delta_t = millis() - thismillis;
+  int32_t delta_t = micros() - thismillis;
   thismillis += delta_t;
   timeleft = timeleft - (delta_t * (1 + strike_number * 0.25)); // Updates the time left with the change in the time since last updating, modified by the time scale due to strikes
+  //  Serial.print("Dilation: ");
+  //  Serial.print(1 + strike_number * 0.25);
+  //  Serial.print( " | Delta t: ");
+  //  Serial.println(delta_t * (1 + strike_number * 0.25));
+  //  Serial.println(micros());
+  Serial.print(timeleft);
+  Serial.print(" -> ");
+  Serial.println(timeleft / 1000);
+  Serial.print(" -> ");
+  Serial.println(timeleft / 1000000);
   if (timeleft < 0) {
     timeleft = 0;
     // Lose Game!
@@ -761,7 +792,12 @@ void strikeCalc() {
 
     if (strike_number < strike_limit) {
       // Play buzzer
-      // Change strike indicators
+      char CAN_message[3] = "X ";
+      CAN_message[1] = '0' + strike_number;
+      digitalWrite(PIN_LED, HIGH);
+      ktomeCAN.send((CAN_ALL_MOD | CAN_MUID_ALL), CAN_message, 2);
+      digitalWrite(PIN_LED, LOW);
+
     } else {
       // Game over
       gamemode = 4; // Send to wash-up
@@ -804,23 +840,31 @@ void solveUpdate(long id) {
 }
 
 void stopMessages() {
-  digitalWrite(PIN_LED, HIGH);
-  ktomeCAN.send((CAN_ALL_MOD | CAN_MUID_ALL), "Z", 1);
-  digitalWrite(PIN_LED, LOW);
-  if (game_win) {
-    BLESend("z d");
-  } else if (strike_number == strike_limit) {
-    String BLE_msg = "z ";
+
+  char CAN_message[] = "Z0";
+  String BLE_msg = "";
+  game_running = false;
+  if (game_win) { // Game is won
+    BLE_msg = "z d";
+  } else if (strike_number == strike_limit) { // Game lost due to strike-out
+    BLE_msg = "z ";
     for (byte ii = 0; ii < 15; ii++) {
       if ((((strike_culprit & CAN_STD_MOD) << ii) & CAN_STD_MOD ) == 0) {
         BLE_msg = BLE_msg + ii;
         ii = 15;
       }
     }
-    BLESend(BLE_msg);
-  } else {
-    BLESend("z Z");
+    CAN_message[1] = '1';
+  } else if (timeleft == 0) { //  Game lost due to timer
+    BLE_msg = "z 0";
+    CAN_message[1] = '1';
+  } else { // Game aborted
+    BLE_msg = "z Z";
   }
+  BLESend(BLE_msg);
+  digitalWrite(PIN_LED, HIGH);
+  ktomeCAN.send((CAN_ALL_MOD | CAN_MUID_ALL), CAN_message, 2);
+  digitalWrite(PIN_LED, LOW);
 }
 
 //**********************************************************************
@@ -841,14 +885,23 @@ void timerUpdate() {
   char holding_digit;
   bool time_string = false;
 
-  if (timeleft >= 60000) { // Over 1 minute on the clock...
-    holding_digit = (int)(timeleft / 600000) + 48;
+  //  if (timeleft >= 60000) { // Over 1 minute on the clock...
+  //    holding_digit = (int)(timeleft / 600000) + 48;
+  //    timestr.setCharAt(0, holding_digit);
+  //    holding_digit = (int)((timeleft % 600000) / 60000) + 48;
+  //    timestr.setCharAt(1, holding_digit);
+  //    holding_digit = (int)((timeleft % 60000) / 10000) + 48;
+  //    timestr.setCharAt(2, holding_digit);
+  //    holding_digit = (int)((timeleft % 10000) / 1000) + 48;
+  //    timestr.setCharAt(3, holding_digit);
+  if (timeleft >= 60000000) { // Over 1 minute on the clock...
+    holding_digit = (int32_t)(timeleft / 600000000) + 48;
     timestr.setCharAt(0, holding_digit);
-    holding_digit = (int)((timeleft % 600000) / 60000) + 48;
+    holding_digit = (int32_t)((timeleft % 600000000) / 60000000) + 48;
     timestr.setCharAt(1, holding_digit);
-    holding_digit = (int)((timeleft % 60000) / 10000) + 48;
+    holding_digit = (int32_t)((timeleft % 60000000) / 10000000) + 48;
     timestr.setCharAt(2, holding_digit);
-    holding_digit = (int)((timeleft % 10000) / 1000) + 48;
+    holding_digit = (int32_t)((timeleft % 10000000) / 1000000) + 48;
     timestr.setCharAt(3, holding_digit);
   }
   else if (timeleft == 0) { // Timer ran out
@@ -857,14 +910,23 @@ void timerUpdate() {
     draw_colon = false;
     time_string = true;
   }
+  //  else { // Under 1 minute left...
+  //    holding_digit = (int)(timeleft / 10000) + 48;
+  //    timestr.setCharAt(0, holding_digit);
+  //    holding_digit = (int)((timeleft % 10000) / 1000) + 48;
+  //    timestr.setCharAt(1, holding_digit);
+  //    holding_digit = (int)((timeleft % 1000) / 100) + 48;
+  //    timestr.setCharAt(2, holding_digit);
+  //    holding_digit = (int)((timeleft % 100) / 10) + 48;
+  //    timestr.setCharAt(3, holding_digit);
   else { // Under 1 minute left...
-    holding_digit = (int)(timeleft / 10000) + 48;
+    holding_digit = (int32_t)(timeleft / 10000000) + 48;
     timestr.setCharAt(0, holding_digit);
-    holding_digit = (int)((timeleft % 10000) / 1000) + 48;
+    holding_digit = (int32_t)((timeleft % 10000000) / 1000000) + 48;
     timestr.setCharAt(1, holding_digit);
-    holding_digit = (int)((timeleft % 1000) / 100) + 48;
+    holding_digit = (int32_t)((timeleft % 1000000) / 100000) + 48;
     timestr.setCharAt(2, holding_digit);
-    holding_digit = (int)((timeleft % 100) / 10) + 48;
+    holding_digit = (int32_t)((timeleft % 100000) / 10000) + 48;
     timestr.setCharAt(3, holding_digit);
   }
   if (time_string) {
@@ -879,15 +941,25 @@ void timerUpdate() {
   timerdisp.writeDisplay();
 
   String BLE_msg;
-  if (timestr != timestr_prev) {
-    BLE_msg = "t ";
-    if (timeleft >= 60000) {
+  BLE_msg = "t ";
+  if (timeleft >= 60000000) { // Over a minute left - look at whole timer string
+    if (timestr != timestr_prev) { // second has ticked on
       BLE_msg = BLE_msg + timestr.charAt(0) + timestr.charAt(1) + " " + timestr.charAt(2) + timestr.charAt(3);
       BLESend(BLE_msg);
-    } else {
-      if (timestr.substring(0, 2) != timestr_prev.substring(0, 2)) {
-        BLE_msg = BLE_msg + "00 " + timestr.charAt(0) + timestr.charAt(1);
-        BLESend(BLE_msg);
+      if (game_running) {
+        digitalWrite(PIN_LED, HIGH);
+        ktomeCAN.send((CAN_MASTER), "H", 1);
+        digitalWrite(PIN_LED, LOW);
+      }
+    }
+  } else { // Under a minute, just look at first two chars
+    if (timestr.charAt(0) != timestr_prev.charAt(0) || timestr.charAt(1) != timestr_prev.charAt(1)) { // second has ticked on
+      BLE_msg = BLE_msg + "00 " + timestr.charAt(0) + timestr.charAt(1);
+      BLESend(BLE_msg);
+      if (game_running) {
+        digitalWrite(PIN_LED, HIGH);
+        ktomeCAN.send((CAN_MASTER), "H", 1);
+        digitalWrite(PIN_LED, LOW);
       }
     }
   }

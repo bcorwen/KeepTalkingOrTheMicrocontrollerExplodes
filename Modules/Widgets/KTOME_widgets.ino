@@ -7,7 +7,7 @@
 //
 //  Module: Widgets (SLAVE)
 //
-//  version 0.1.0
+//  version 0.5.0
 //
 //  Goal for this version: Have e-ink paper display serial from timer
 //
@@ -22,6 +22,8 @@
 #define ENABLE_GxEPD2_GFX 0
 #include <GxEPD2_3C.h>
 #include <U8g2_for_Adafruit_GFX.h>
+#include "SoundFile.h"
+#include <XT_DAC_Audio.h>
 
 //**********************************************************************
 // GLOBAL VARIABLES
@@ -36,7 +38,7 @@
 
 // CAN                      [ Module type ][    ID   ][>]unused
 #define CAN_ID            0b00000000000000000000000000000 // ID for Master (timer)
-#define CAN_MASK          0b11111111111111100000000000000 // Filter for the Master (timer)
+#define CAN_MASK          0b00000000000000000000000000000 // Filter for the Master (timer) - was 0b11111111111111100000000000000
 
 GxEPD2_3C<GxEPD2_290c, GxEPD2_290c::HEIGHT> display(GxEPD2_290c(PIN_EINK_CS, PIN_EINK_DC, PIN_EINK_RST, PIN_EINK_BUSY));
 U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;
@@ -45,8 +47,52 @@ uint16_t colorWhite = GxEPD_WHITE;
 uint16_t colorBlack = GxEPD_BLACK;
 uint16_t colorRed   = GxEPD_RED;
 
+XT_DAC_Audio_Class DacAudio(25, 0);
+XT_Wav_Class SoundTick(TickWav);
+XT_Wav_Class SoundTock(TockWav);
+XT_Wav_Class SoundStrike(StrikeWav);
+XT_Wav_Class SoundExpl(ExplWav);
+
 char serial_number[] = "XXXXXX";
 bool serial_inbox = false;
+byte strike_number;
+long thismillis;
+long tockdelays[3] = {667, 600, 1000};
+bool tockdone = true;
+bool game_running = false;
+
+//**********************************************************************
+// E-PAPER DISPLAY
+//**********************************************************************
+
+void draw_serial() {
+  u8g2Fonts.setFontMode(1);
+  u8g2Fonts.setFontDirection(1);
+
+  display.firstPage();
+  do
+  {
+    display.fillScreen(colorWhite);
+    u8g2Fonts.setForegroundColor(colorBlack);
+    u8g2Fonts.setBackgroundColor(colorWhite);
+    //u8g2Fonts.setFont(u8g2_font_inb53_mf);
+    u8g2Fonts.setFont(u8g2_font_AnonPro_tf);
+    u8g2Fonts.setCursor(16, 148 - (u8g2Fonts.getUTF8Width(serial_number) / 2));
+    u8g2Fonts.print(serial_number);
+    display.fillRect(76, 0, 52, 296, colorRed);
+    u8g2Fonts.setForegroundColor(colorWhite);
+    u8g2Fonts.setBackgroundColor(colorRed);
+    u8g2Fonts.setFont(u8g2_font_LibSans_tf);
+    u8g2Fonts.setCursor(90, 148 - (u8g2Fonts.getUTF8Width("SERIAL #") / 2));
+    u8g2Fonts.print("SERI");
+    u8g2Fonts.setCursor(90, 154);
+    u8g2Fonts.print("AL #");
+
+  }
+
+  while (display.nextPage());
+  delay(1000);
+}
 
 //**********************************************************************
 // FUNCTIONS: Main
@@ -82,41 +128,15 @@ void setup() {
 
 void loop() {
   CANInbox();
-  delay(2000);
   if (serial_inbox) {
     draw_serial();
     serial_inbox = false;
   }
-  delay(100);
-}
-
-void draw_serial() {
-  u8g2Fonts.setFontMode(1);
-  u8g2Fonts.setFontDirection(1);
-
-  display.firstPage();
-  do
-  {
-    display.fillScreen(colorWhite);
-    u8g2Fonts.setForegroundColor(colorBlack);
-    u8g2Fonts.setBackgroundColor(colorWhite);
-    //u8g2Fonts.setFont(u8g2_font_inb53_mf);
-    u8g2Fonts.setFont(u8g2_font_AnonPro_tf);
-    u8g2Fonts.setCursor(16, 148 - (u8g2Fonts.getUTF8Width(serial_number) / 2));
-    u8g2Fonts.print(serial_number);
-    display.fillRect(76, 0, 52, 296, colorRed);
-    u8g2Fonts.setForegroundColor(colorWhite);
-    u8g2Fonts.setBackgroundColor(colorRed);
-    u8g2Fonts.setFont(u8g2_font_LibSans_tf);
-    u8g2Fonts.setCursor(90, 148 - (u8g2Fonts.getUTF8Width("SERIAL #") / 2));
-    u8g2Fonts.print("SERI");
-    u8g2Fonts.setCursor(90, 154);
-    u8g2Fonts.print("AL #");
-
+  if (millis() >= thismillis + tockdelays[strike_number] && !tockdone) {
+    DacAudio.Play(&SoundTock);
+    tockdone = true;
   }
-
-  while (display.nextPage());
-  delay(1000);
+  DacAudio.FillBuffer();
 }
 
 //**********************************************************************
@@ -137,6 +157,30 @@ void CANInbox() {
       Serial.println(serial_number);
       serial_inbox = true;
     }
-
+    else if (ktomeCAN.can_msg[0] == 'X') {
+      // Play strike sound
+      DacAudio.Play(&SoundStrike);
+      strike_number = ktomeCAN.can_msg[1] - '0';
+      Serial.println(strike_number, DEC);
+    }
+    else if (ktomeCAN.can_msg[0] == 'H') {
+      // Play ticking sound
+      thismillis = millis();
+      DacAudio.Play(&SoundTick);
+      tockdone = false;
+    }
+    else if (ktomeCAN.can_msg[0] == 'Z') {
+      // Stop all sounds
+      game_running = false;
+      tockdone = true;
+      DacAudio.StopAllSounds();
+      if (ktomeCAN.can_msg[1] == '1') {
+        DacAudio.Play(&SoundExpl);
+      }
+    }
+    else if (ktomeCAN.can_msg[0] == 'A') {
+      game_running = true;
+      strike_number = 0;
+    }
   }
 }
