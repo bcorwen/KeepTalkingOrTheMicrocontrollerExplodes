@@ -24,21 +24,20 @@ However, there were big advantages to the ESP32 that many people explained on th
 The ESP32 also has a dual-core architecture (plus an extra Ultra Low Power processor), in-built Wi-Fi and Bluetooth, and some boards can also have integrated cameras, SD card readers and other peripherals. At the time of switching, I wasn't planning on touching those features... but more on that later.
 
 ### Decentralisation
-A lot of my Arduino code could be transferred across to the ESP32 version, however one of the first issues what that it was still not clear that a single ESP32 could run potentially 12 modules from a pool of 14 different module types, and how it could detect which modules were plugged in from the simple components in each module box. A solution to this was one ESP32 for each module, which would be specifically coded to run that module type only. However that introduced a new challenge; inter-module communications were now necessary.
+A lot of my Arduino code could be transferred across to the ESP32 version, however one of the first issues what that it was still not clear that a single ESP32 could run potentially 12 modules from a pool of 14 different module types, and how it could detect which modules were plugged in from the simple components in each module box. A solution to this was to use one ESP32 for each module, which would be specifically coded to run that module type only. However that introduced a new challenge; inter-module communications were now necessary.
 
-Comms was something I'd seen in a couple of other KTANE-like projects online, however back when I started this seemed like pure magic. After spending a while wrestling with learning libraries and using shift registers with other components, I began to understand how things were put togethr and felt a little more confident in attempting it. Comms between the ESP32s was high on my to-do list, as it would underpin a lot of how the old code would be divided up across the new microcontrollers.
+Comms was something I'd seen in a couple of other KTANE-like projects online, however back when I started this seemed like pure magic. After spending a while wrestling with learning libraries and using shift registers with other components, I began to understand how things were put togethr and felt a little more confident in attempting it. Comms between the ESP32s was high on my to-do list, as it would underpin a lot of how the old code would be divided up across the new microcontrollers, but we needed something able to communicate first.
 
 ### Starting out
-
-To start, the majority of the Arduino code was moved across to the ESP which would be seated in the Timer module. This would be the master. It makes sense - every bomb needs the Timer! The Timer would obviously track the game time and strikes, but also co-ordinate the other modules to track strikes, successes and setup.
+To start, the majority of the Arduino code was moved across to the ESP which would be seated in the Timer module. This would be the master. It makes sense - every bomb needs the Timer! The Timer would obviously control the game time and the strike display, but also co-ordinate the other modules to track strikes, successes and setup.
 
 Alongside this, the Keypad module was chosen to be imported, as it is a completely self-contained module. It doesn't need to know the time, the number of strikes, the serial number, etc. This means it could be tested in isolation of connection to the Timer.
 
 One additional consideration was brewing in the back of my mind: how to setup modules which needed manual intervention. For a module such as password, the game generates a password and a list of characters to scroll through on the screen. This needs no manual setup as the ESP would just have to change what it shows on the screen during the game. However a module such as Keypad would need physical keys with the correct symbols attached to it before the game starts.
 
-This manual setup was inplemented crudely on an LCD attached to the Mega in the prototype, but this was always a temporary solution and a much better one would have to be found now I was aiming a little higher with the quality of the game. I wondered how easy it would be to not show this info directly on a display of some sort which would need to be physically engineered into the module, but instead fetching that info digitally - much like using the serial monitor while debugging the ESP32 sketches.
+This manual setup was implemented crudely in the prototype by displaying messages on an LCD attached to the Mega. This was always a temporary solution and a much better one would have to be found now I was aiming a little higher with the quality of the game. I wondered how easy it would be to not just show this info directly on a display of some sort (which would need to be physically engineered into the module), but instead fetching that info digitally - much like using the serial monitor while debugging the ESP32 sketches.
 
-While that idea was forming, I began importing the Timer and Keypad modules pretty easily. And so it was time to start on the comms...
+While that idea was forming, I began importing the Timer and Keypad modules pretty easily. And after setting down a foundation, so it was time to start on the comms...
 
 > ![ESP32 timer and keypad modules](https://i.imgur.com/2LLJpaU.jpg)
 > 
