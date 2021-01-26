@@ -55,30 +55,30 @@ Example 1: Basic ID matching
 Source | ID | IDs equal?
 --- | --- | ------- 
 Message | 0b00010011110 | - 
-Device 1 ID | 0b00010011010 | 9th bit mismatch: message ignored
-Device 2 ID | 0b00000011110 | 4th bit mismatch: message ignored
-Device 3 ID | 0b00010011110 | All bits match: message read
+Device 1 | 0b00010011010 | 9th bit mismatch: message ignored
+Device 2 | 0b00000011110 | 4th bit mismatch: message ignored
+Device 3 | 0b00010011110 | All bits match: message read
 
 Example 2: IDs and masks
 
 Source | ID | mask | ID & mask | IDs equal?
 --- | --- | --- | ------- | --- 
 Message | 0b00010011110 | - | 0b00010011110 | - 
-Device 1 ID | 0b00010011010 | 0b11111111111 | 0b00010011010 | 9th bit mismatch: message ignored
+Device 1 | 0b00010011010 | 0b11111111111 | 0b00010011010 | 9th bit mismatch: message ignored
 
 This case was the same as not setting a mask, as every bit is compared.
 
 Source | ID | mask | ID & mask | IDs equal?
 --- | --- | --- | ------- | --- 
 Message | 0b00010011110 | - | 0b00010010000 | - 
-Device 2 ID | 0b00010011010 | 0b11111110000 | 0b00010010000 | All bits match: message read
+Device 2 | 0b00010011010 | 0b11111110000 | 0b00010010000 | All bits match: message read
 
 The last 4 bits are not compared, enabling this device with a different ID to still accept this message.
 
 Source | ID | mask | ID & mask | IDs equal?
 --- | --- | --- | ------- | --- 
 Message | 0b00010011110 | - | 0b00000000000 | - 
-Device 3 ID | 0b00010011010 | 0b00000000000 | 0b00000000000 | All bits match: message read
+Device 3 | 0b00010011010 | 0b00000000000 | 0b00000000000 | All bits match: message read
 
 An all-zero mask will allow the device to read every message, no matter its ID!
 
