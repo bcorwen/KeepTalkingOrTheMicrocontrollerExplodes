@@ -11,7 +11,7 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 [Prev post: Moving to the ESP32](devblog_2.md)
 
-## 2021/01/26 - Communications (part 1): CAN
+## 2021/01/31 - Communications (part 1): CAN
 Another catch-up update covering about August to November 2020.
 
 ### The need for comms
@@ -44,6 +44,7 @@ if (message_id == device_id) {
 To show an example:
 
 > Example 1: Basic ID matching
+> 
 Source | ID | IDs equal?
 --- | --- | ------- 
 Message | 0b00010011110 | - 
@@ -60,6 +61,7 @@ if ((message_id & device_mask) == (device_id & device_mask)) {
 }
 ```
 >Example 2: IDs and masks
+> 
 Source | ID | mask | ID & mask | IDs equal?
 --- | --- | --- | ------- | --- 
 Message | 0b00010011110 | - | 0b00010011110 | - 
@@ -82,9 +84,62 @@ Device 3 | 0b00010011010 | 0b00000000000 | 0b00000000000 | All bits match: messa
 > An all-zero mask will allow the device to read every message, no matter its ID!
 
 #### Message characteristics
-
+Message IDs are followed by the body of the message. CAN messages are pretty short: only 8-bytes! So you won't be able to send a huge status update with one message, however they are quick to send. It appears appropriate to use CAN to send quick flags, triggers and other short pieces of info, but so long as we're smart about encoding it down to keep it brief. Better yet, we can use the IDs to assist in keeping things moving by being smart about where messages are sent.
 
 ### How I used CAN for KTOME
+Firstly, credit to where credit's due. I used the CAN library for ESP32 forked by [timurrrr](https://github.com/timurrrr/arduino-CAN), originally from [Sandeep Mistry](https://github.com/sandeepmistry/arduino-CAN). These were excellent at keeping things simple, with easy function calls to set up the CAN bus on the right pins, sending and receiving messages.
+
+For hardware, all the ESP32 needed as an extra was a bus board. I chose the cheap and simple [TJA1050 CAN chips](https://www.amazon.co.uk/gp/product/B07VJ6XF92/) which worked without problems - although I did need to set up a 5V line to power these chips, and they were not spaced to fit breadboards, leaving them dangling at the end of cables.
+
+#### Allocating IDs
+Since the prototype, I had been thinking about how to get a plug-and-play architecture with as little manual intervention required, it was clear that the CAN IDs would be ideal to become a distinguishing characteristic. After a few attempts at drawing up different ways of using the IDs, I settled on using the following key:
+
+CAN ID bit | '1' in this bit means...
+--- | ---
+29 | Timer (master)
+28 | Wires
+27 | Button
+26 | Keypad
+25 | Simon Says
+24 | Who's on First
+23 | Memory
+22 | Morse
+21 | Complicated Wires
+20 | Wire Sequence
+19 | Maze
+18 | Password
+17 | Venting Gas
+16 | Capacitor Discharge
+15 | Knobs
+14 | (not used)
+13 | (not used)
+12 | (not used)
+11 | Unique ID #1
+10 | Unique ID #2
+9 | Unique ID #3
+8 | Unique ID #4
+7 | Unique ID #5
+6 | Unique ID #6
+5 | Unique ID #7
+4 | Unique ID #8
+3 | Unique ID #9
+2 | Unique ID #10
+1 | Unique ID #11
+
+The first 18 bits are used to used to define the module type (with 3 of these currently unused but available for future modded or custom modules. The remaining 11 bits denote unique identifiers for each module type. This means a bomb with multiple Keypad modules would be able to distinguish the two modules by the position of their unique identifier bit.
+
+>For example:
+0b10000000000000000000000000000 is the Timer
+0b01000000000000000010000000000 is the 1st Wires module
+0b01000000000000000000001000000 is the 5th Wires module
+
+A special case: the ESP32 controlling the Widgets is given a blank ID, as it will also always be present but will not transmit any messages.
+
+#### Designing the messages
+
+
+#### How CAN comms were used in the script
+
 
 
 [Prev post: Moving to the ESP32](devblog_2.md)
