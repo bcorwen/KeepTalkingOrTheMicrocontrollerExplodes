@@ -15,7 +15,7 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 Another catch-up update covering about August to November 2020.
 
 ### The need for comms
-As discussed in the [previous post](devblog_2.md), now I would be using one ESP32 per module there would need to be some way for the microcontrollers to communicate with one another. Having converted a good portion of the old code to create basic Timer and Keypad modules, I began to break down potential types of messages that would need to be exchanged to ensure a game flow and consistent states across the system.
+As discussed in the [previous post](devblog_2.md), now that I would be using one ESP32 per module there would need to be some way for the microcontrollers to communicate with one another. Having converted a good portion of the old code to create basic Timer and Keypad modules, I began to break down potential types of messages that would need to be exchanged to ensure a game flow and consistent states across the system.
 
 ### Communication options
 After a quick search as for communication options, there appeared to be three common protocols used with microcontrollers:
@@ -84,7 +84,7 @@ Device 3 | 0b00010011010 | 0b00000000000 | 0b00000000000 | All bits match: messa
 > An all-zero mask will allow the device to read every message, no matter its ID!
 
 #### Message characteristics
-Message IDs are followed by the body of the message. CAN messages are pretty short: only 8-bytes! So you won't be able to send a huge status update with one message, however they are quick to send. It appears appropriate to use CAN to send quick flags, triggers and other short pieces of info, but so long as we're smart about encoding it down to keep it brief. Better yet, we can use the IDs to assist in keeping things moving by being smart about where messages are sent.
+Message IDs are followed by the body of the message. CAN messages are pretty short: only 8-bytes maximum! So you won't be able to send a huge status update with one message, however they are quick to send. It appears appropriate to use CAN to send quick flags, triggers and other short pieces of info, but so long as we're smart about encoding it down to keep it brief. Better yet, we can use the IDs to assist in keeping things moving by being smart about where messages are sent.
 
 ### How I used CAN for KTOME
 Firstly, credit to where credit's due. I used the CAN library for ESP32 forked by [timurrrr](https://github.com/timurrrr/arduino-CAN), originally from [Sandeep Mistry](https://github.com/sandeepmistry/arduino-CAN). These were excellent at keeping things simple, with easy function calls to set up the CAN bus on the right pins, sending and receiving messages.
@@ -133,13 +133,55 @@ The first 18 bits are used to used to define the module type (with 3 of these cu
 0b01000000000000000010000000000 is the 1st Wires module
 0b01000000000000000000001000000 is the 5th Wires module
 
-A special case: the ESP32 controlling the Widgets is given a blank ID, as it will also always be present but will not transmit any messages.
+A special case: the ESP32 controlling the Widgets is given a blank ID (all zeroes). It will also always be present but will not transmit any messages, and so this ID is acceptible as we'll discuss later.
+
+It would have been a more economical use of the ID to consider assigning the totals rather than individual bits, e.g. 0b0001... is the Timer, 0b0010... is Wires, 0b0011... is Button, 0b0100... is Keypad, etc. However doing so would have made it challenging to target messages as specific modules, therefore the bits were considered separately.
 
 #### Designing the messages
+The 8-byte maximum CAN messages would need to be planned out to prevent multiple messages having to be sent when not necessary, helping to prevent the bus becoming too burdened.
 
+I planned out a system where the majority of messages could be communicated in one byte, assigned a letter to keep it easy to remember and use. Messages from the master would be upper case and messages from slaves would be lower case. Some comms would require more info than just stating an event has occurred, so some would have a defined use for the remaining bytes.
+
+Message to send | CAN message | Comments
+--- | --- | ---
+Master to poll if modules is conncted | P | 
+Module to reply that it's connected | p | 
+Master to have modules initialise a game | I | 
+Module to reply when it's initialised a game | i | 
+Master to ask module to manual setup info | C | 
+Module to reply with manual setup info | c... | The content following the 'c' is module specific, e.g. wire colours
+Master to confirm manual setup aligned with inputs | M | 
+Module does not confirm inputs match | m0 | 
+Module confirms inputs match expected setup | m1 | 
+Master to send game start | A | 
+Master to send game stop | Z$ | The character following 'Z' denotes whether bomb exploded, bomb defused or game aborted
+Master to send edgework setup | W##### | Characters after 'W' denote counts for batteries, ports, useful indicators, serial number factors
+Master to send serial number | S$$$$$$ | Characters after 'S' denote serial number
+Master to send strike count | X# | Number after 'X' denotes the number of strikes
+Master to send heartbeat for ticking sound | H | Send every second decrement on the timer, to trigger ticking
+Module to tell master of a strike | x | 
+Module to tell master of a defusal | d | 
+Module to request time from master | t | 
+Master to transmit time on display | T#### | Numbers after 'T' denote the digits of the timer display
 
 #### How CAN comms were used in the script
+I created a short library to use CAN in the project. Although the main CAN library was already pretty simple, I could incorporate some formatting and quality of life improvements, such as the option to serial print the message contents and IDs being sent and received. It also contained some definitions for the IDs, as explained above.
 
+Modules would be registered to the bus with its type and a unique number, e.g. A Keypad module might be `0b0001000000000000000000000000 & 0b00000000000000000010000000000 = 0b00010000000000000010000000000`. The mask would typically equal the ID, resulting in the module only listening out for any message which contained the module's ID, e.g. A message with ID `0b00010000000000000011111111111` is designed to target every Keypad module (as it is composed of the Keypad bit following by all unique identifier bits, so it would be accepted by the previous Keypad module.
 
+As the timer is assigned the unofficial "Master" of the network, it typically initiates a back-and-forth with the other modules.
+
+One of the first messages the Timer would be a 'P' to see which modules are connected to the bus. As this needs to pick up every module, it sends 'P' with the message ID of `0b01111111111111111111111111111` - encompassing the ID of every module, bar the Timer itself.
+
+A slave module, when replying to the Timer, is programmed to include its own ID in the message ID. For example, on receiving the 'P' message, the Keypad replies to the Timer to let it know it is connected. It sends 'p' in a message with ID `0b10010000000000000010000000000`. The Timer receives this as the first bit is a one, it removes the first one and so it is left with the ID of the Keypad! The Timer can now store this ID and remember which modules are plugged in, and so can tell how many modules are attached, which module types and specifically address this module in particular (when the manual setup of attaching the correct Keypad keys is required).
+
+Many of the messages are obviously exchanged in the order they appear in the above table, from registering modules, to asking them to set up a game, to starting a game. Some messages occur on specific events, such as a module declaring the user has entered a wrong input so sends a 'x' strike to the Timer, which is then followed up by the Timer broadcasting the strike total to all modules who require it (such as Simon Says).
+
+### Wrap-up
+The CAN was a pretty easy protocol to setup, however needed a fair bit of planning (and a couple of revisions) to make best use of it and to tidy up any omissions.
+
+One of my brief video updates covers much of what is discussed here in context; you can view it [here](https://www.youtube.com/watch?v=9nwYC-B_rjc), as well as a few smaller pieces of CAN usage in the following two videos in the [project playlist.](https://www.youtube.com/watch?v=X2lTdU5nDYY&list=PLJqFvAhkcSkkks42zClG5WlvO1khFZCKK&index=5)
+
+And since I started with the Keypad module as our only slave and that we have been mentioning manual setup in this post and last, it's no spoiler that I needed to test that Keypad module by knowing which symbols are being generated and whether it is correctly striking or defusing. After thinking of options, it seemed plausible to create a phone app which could pair to the Timer via Bluetooth and give the user a visual read-out of the Keypad symbols. The next blog post will cover the creation of the companion app, how to communicate with the ESP32 with Bluetooth Low Energy, and how the message protocol was created.
 
 [Prev post: Moving to the ESP32](devblog_2.md)
