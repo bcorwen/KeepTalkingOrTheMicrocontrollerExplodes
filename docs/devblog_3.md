@@ -129,14 +129,14 @@ CAN ID bit | '1' in this bit means...
 2 | Unique ID #10
 1 | Unique ID #11
 
-The first 18 bits are used to used to define the module type (with 3 of these currently unused but available for future modded or custom modules. The remaining 11 bits denote unique identifiers for each module type. This means a bomb with multiple Keypad modules would be able to distinguish the two modules by the position of their unique identifier bit.
+The first 18 bits are used to define the module type (with 3 of these currently unused but available for future modded or custom modules. The remaining 11 bits denote unique identifiers for each module type. This means a bomb with multiple Keypad modules would be able to distinguish the two modules by the position of their unique identifier bit.
 
 For example:
 `0b10000000000000000000000000000` is the Timer
 `0b01000000000000000010000000000` is the 1st Wires module
 `0b01000000000000000000001000000` is the 5th Wires module
 
-A special case: the ESP32 controlling the Widgets is given a blank ID (all zeroes). It will also always be present but will not transmit any messages, and so this ID is acceptible as we'll discuss later.
+A special case: the ESP32 controlling the Widgets is given a blank ID (all zeroes). It will also always be present but will not transmit any messages, and so this ID is acceptable as we'll discuss later.
 
 It would have been a more economical use of the ID to consider assigning the totals rather than individual bits, e.g. 0b0001... is the Timer, 0b0010... is Wires, 0b0011... is Button, 0b0100... is Keypad, etc. However doing so would have made it challenging to target messages as specific modules, therefore the bits were considered separately.
 
@@ -147,7 +147,7 @@ I planned out a system where the majority of messages could be communicated in o
 
 Message to send | CAN message | Comments
 --- | --- | ---
-Master to poll if modules is conncted | P | 
+Master to poll if modules is connected | P | 
 Module to reply that it's connected | p | 
 Master to have modules initialise a game | I | 
 Module to reply when it's initialised a game | i | 
