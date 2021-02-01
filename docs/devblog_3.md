@@ -7,8 +7,6 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 ---
 
-> WIP post...
-
 [Prev post: Moving to the ESP32](devblog_2.md)
 
 ## 2021/01/31 - Communications (part 1): CAN
@@ -16,6 +14,11 @@ Another catch-up update covering about August to November 2020.
 
 ### The need for comms
 As discussed in the [previous post](devblog_2.md), now that I would be using one ESP32 per module there would need to be some way for the microcontrollers to communicate with one another. Having converted a good portion of the old code to create basic Timer and Keypad modules, I began to break down potential types of messages that would need to be exchanged to ensure a game flow and consistent states across the system.
+
+> ![Flow diagram](https://i.imgur.com/ritYqLI.jpg)
+> 
+> An early flow diagram showing messages moving between devices.
+
 
 ### Communication options
 After a quick search as for communication options, there appeared to be three common protocols used with microcontrollers:
@@ -128,10 +131,10 @@ CAN ID bit | '1' in this bit means...
 
 The first 18 bits are used to used to define the module type (with 3 of these currently unused but available for future modded or custom modules. The remaining 11 bits denote unique identifiers for each module type. This means a bomb with multiple Keypad modules would be able to distinguish the two modules by the position of their unique identifier bit.
 
-> For example:
-> 0b10000000000000000000000000000 is the Timer
-> 0b01000000000000000010000000000 is the 1st Wires module
-> 0b01000000000000000000001000000 is the 5th Wires module
+For example:
+`0b10000000000000000000000000000` is the Timer
+`0b01000000000000000010000000000` is the 1st Wires module
+`0b01000000000000000000001000000` is the 5th Wires module
 
 A special case: the ESP32 controlling the Widgets is given a blank ID (all zeroes). It will also always be present but will not transmit any messages, and so this ID is acceptible as we'll discuss later.
 
@@ -156,7 +159,7 @@ Module confirms inputs match expected setup | m1 |
 Master to send game start | A | 
 Master to send game stop | Z$ | The character following 'Z' denotes whether bomb exploded, bomb defused or game aborted
 Master to send edgework setup | W##### | Characters after 'W' denote counts for batteries, ports, useful indicators, serial number factors
-Master to send serial number | S$$#$$# | Characters after 'S' denote serial number
+Master to send serial number | S###### | Characters after 'S' denote serial number
 Master to send strike count | X# | Number after 'X' denotes the number of strikes
 Master to send heartbeat for ticking sound | H | Send every second decrement on the timer, to trigger ticking
 Module to tell master of a strike | x | 
@@ -167,7 +170,7 @@ Master to transmit time on display | T#### | Numbers after 'T' denote the digits
 #### How CAN comms were used in the script
 I created a short library to use CAN in the project. Although the main CAN library was already pretty simple, I could incorporate some formatting and quality of life improvements, such as the option to serial print the message contents and IDs being sent and received. It also contained some definitions for the IDs, as explained above.
 
-Modules would be registered to the bus with its type and a unique number, e.g. A Keypad module might be `0b0001000000000000000000000000 & 0b00000000000000000010000000000 = 0b00010000000000000010000000000` . The mask would typically equal the ID, resulting in the module only listening out for any message which contained the module's ID, e.g. A message with ID `0b00010000000000000011111111111` is designed to target every Keypad module (as it is composed of the Keypad bit following by all unique identifier bits, so it would be accepted by the previous Keypad module.
+Modules would be registered to the bus with its type and a unique number, e.g. A Keypad module might be `0b00010000000000000000000000000 & 0b00000000000000000010000000000 = 0b00010000000000000010000000000` . The mask would typically equal the ID, resulting in the module only listening out for any message which contained the module's ID, e.g. A message with ID `0b00010000000000000011111111111` is designed to target every Keypad module (as it is composed of the Keypad bit following by all unique identifier bits, so it would be accepted by the previous Keypad module.
 
 As the timer is assigned the unofficial "Master" of the network, it typically initiates a back-and-forth with the other modules.
 
