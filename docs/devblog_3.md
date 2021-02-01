@@ -183,7 +183,7 @@ Many of the messages are obviously exchanged in the order they appear in the abo
 ### Wrap-up
 The CAN was a pretty easy protocol to setup, however needed a fair bit of planning (and a couple of revisions) to make best use of it and to tidy up any omissions.
 
-One of my brief video updates covers much of what is discussed here in context; you can view it [here](https://www.youtube.com/watch?v=9nwYC-B_rjc), as well as a few smaller pieces of CAN usage in the following two videos in the [project playlist.](https://www.youtube.com/watch?v=X2lTdU5nDYY&list=PLJqFvAhkcSkkks42zClG5WlvO1khFZCKK&index=5)
+One of my brief video updates covers much of what is discussed here in context; you can view it [here](https://www.youtube.com/watch?v=9nwYC-B_rjc). This is a pretty early test of the CAN comms, so further CAN usage is shown in the following two videos of the [project playlist.](https://www.youtube.com/watch?v=X2lTdU5nDYY&list=PLJqFvAhkcSkkks42zClG5WlvO1khFZCKK&index=5)
 
 And since I started with the Keypad module as our only slave and that we have been mentioning manual setup in this post and last, it's no spoiler that I needed to test that Keypad module by knowing which symbols are being generated and whether it is correctly striking or defusing. After thinking of options, it seemed plausible to create a phone app which could pair to the Timer via Bluetooth and give the user a visual read-out of the Keypad symbols. The next blog post will cover the creation of the companion app, how to communicate with the ESP32 with Bluetooth Low Energy, and how the message protocol was created.
 
