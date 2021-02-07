@@ -87,6 +87,6 @@ Unlike the CAN communication post, I will not go into details of the messages se
 E.g. Pressing the button to start a game on the app sends an "A" message to the ESP.
 When the game is lost, a message "z 3" might be sent to the app. 'z' meaning the game has finished, the number referencing the module responsible for losing the game, and these being separated by a space (a convenient divider given the functions available in Kodular).
 
-If you want to see more, I'd recommend [this video](https://www.youtube.com/watch?v=KqHBs5UcY2M) for a short run through of how the app controls the game, [this earlier video]([this early video](https://www.youtube.com/watch?v=9nwYC-B_rjc) for a more immature description but with more detail on the BLE messages, and finally [this short one](https://www.youtube.com/watch?v=DGMcetRa-00) which includes the widget setup!
+If you want to see more, I'd recommend [this video](https://www.youtube.com/watch?v=KqHBs5UcY2M) for a short run through of how the app controls the game, [this earlier video](https://www.youtube.com/watch?v=9nwYC-B_rjc) for a more immature description but with more detail on the BLE messages, and finally [this short one](https://www.youtube.com/watch?v=DGMcetRa-00) which includes the widget setup!
 
 [Prev post: Communications (part 1): CAN](devblog_3.md)
