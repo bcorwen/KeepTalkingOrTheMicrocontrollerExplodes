@@ -53,4 +53,6 @@ The audio amp is the [PAM8403](https://components101.com/modules/pam8403-stereo-
 
 The Widget controller listens on the CAN bus for cues from the Timer, then plays sound files with little overall delay according to a specific audio trigger (tick sound when the timer ticks over a second) or other game triggers (strike sound when a strike message is broadcast). As the Widget controller doesn't have to send a message, it is given a blank (all-zeros) CAN ID and mask.
 
+[See it all in action here!](https://www.youtube.com/watch?v=DGMcetRa-00)
+
 [Prev post: Communications (part 2): BLE](devblog_4.md)
