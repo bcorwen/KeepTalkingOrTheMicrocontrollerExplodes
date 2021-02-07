@@ -49,9 +49,9 @@ So a little about how this works! Bluetooth Low Energy (BLE) is the newer altern
 
 To set up BLE comms, one device is configured as a server with the others as clients which connect to the server. In KTOME, the Timer ESP32 is the server with the phone app acting as a client.
 
-To send data, a service and a characteristic must be created. A characteristic is essentially storage for a value, and have a certain method of interaction (they could be read from, written to, cause a notification, etc). A service is a collection of characteristics.
+To send data, a service and a characteristic must be created. A characteristic is essentially storage for a value, and it will have a certain method of interaction (they could be read from, written to, cause a notification, etc). A service is simply a collection of characteristics.
 
-Lastly, a message sent via BLE can be a maximum of 23 bytes. Again not much, but more that with CAN and with a little careful planning and this is plenty!
+Lastly, a message sent via BLE can be a maximum of 23 bytes. Again not large, but more that with CAN and with a little careful planning this is plenty!
 
 ### How I used BLE for KTOME
 
@@ -81,11 +81,11 @@ On game start, the phone app changes to reflect a readout of the game timer, num
 > 
 > The game running and debriefing screens of the app
 
-If the bomb is defused or explodes, the phone app is informed by the Timer, which displayed a results screen. This mirrored the videogame's debrief screen.
+If the bomb is defused or explodes, the phone app is informed by the Timer, which displays a results screen. This mirrored the videogame's debrief screen.
 
-Unlike the CAN communication post, I will not go into details of the messages sent between the app and ESP32. Most are single characters which reference a certain action or event, and these are likely to be easily guessed from the high-level description above.
+Unlike the CAN communication post, I will not go into details of the messages sent between the app and ESP32. Most are single characters which reference a certain action or event, and it's probably quite easy to guess when these messages are sent from the high-level description above.
 E.g. Pressing the button to start a game on the app sends an "A" message to the ESP.
-When the game is lost, a message "z 3" might be sent to the app. 'z' meaning the game has finished, the number coding for the module responsible for losing the game, and these being space-separated (a convenient divider given the functions available in Kodular).
+When the game is lost, a message "z 3" might be sent to the app. 'z' meaning the game has finished, the number referencing the module responsible for losing the game, and these being separated by a space (a convenient divider given the functions available in Kodular).
 
 If you want to see more, I'd recommend [this video](https://www.youtube.com/watch?v=KqHBs5UcY2M) for a short run through of how the app controls the game, [this earlier video]([this early video](https://www.youtube.com/watch?v=9nwYC-B_rjc) for a more immature description but with more detail on the BLE messages, and finally [this short one](https://www.youtube.com/watch?v=DGMcetRa-00) which includes the widget setup!
 
