@@ -33,7 +33,7 @@ As I was learning the ins and outs of the ESP32 by reading articles and project 
 
 > ![In-game menu](https://i.imgur.com/ygBRZrX.jpg)
 > 
-> The in-game menu to create a random game
+> The in-game menu to create a random bomb
 
 BLE was quite a tricky area to dive in to, but credit to Juan Antonio's very insightful [range of tutorials](https://community.appinventor.mit.edu/t/ble-esp32-bluetooth-send-receive-arduino-ide/1980/17) which not only covered the ESP32 code but how to build the phone app.
 
@@ -41,7 +41,7 @@ I selected the website [Kodular](https://creator.kodular.io/) as it allowed free
 
 > ![Kodular code](https://i.imgur.com/D52mQrh.png)
 > 
-> A screenshot of the Kodular visual code for the companion app
+> A screenshot of the Kodular visual code editor
 
 ### Bluetooth Low Energy
 
