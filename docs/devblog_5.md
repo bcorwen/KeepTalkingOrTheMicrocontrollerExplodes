@@ -19,10 +19,10 @@ The Timer holds a variable to describe the game state:
 * Comms setup - Waits for the phone app to pair and allows time for other modules to initialise their CAN nodes.
 * Game setup - Handles activities to set up a new game, taking input from the phone app's game manager screen, polling to find other connected modules and co-ordinating manual setup. The Timer also creates the non-module setup, including generating a serial code and widgets.
 * Game running - Runs the game clock, the physical displays of the Timer module, co-ordinates messages with the other modules and tracks defusal and strike events.
-* Game debrief - Responsible for ending the game, halting the other modules, feeding info to the app for debrief, and reseting for the next game.
+* Game debrief - Responsible for ending the game, halting the other modules, feeding info to the app for debrief, and resetting for the next game.
 
 On the physical side, there are three components:
-* The time display - I have used the [Adafruit 1.27" 4-digit 7-segment display with I2C ackpack](https://www.adafruit.com/product/1270). It comes with a handy controller and library, looks fairly similar to the game's display and is a reasonable size (looking pretty large but would not inflate the size of the Timer module to be able to house it).
+* The time display - I have used the [Adafruit 1.27" 4-digit 7-segment display with I2C backpack](https://www.adafruit.com/product/1270). It comes with a handy controller and library, looks fairly similar to the game's display and is a reasonable size (looking pretty large but would not inflate the size of the Timer module to be able to house it).
 * The strike display - These are odd x-with-a-strikethrough shaped displays. I'm currently using a 2-digit 14-segment display to create this shape, which are also convenient due to library support and don't require something custom to be created to get the desired effect.
 * A buzzer/speaker - For the Arduino version, I had been using a piezo buzzer which did a basic job, however the Timer has no functional speaker (as we'll see later).
 
@@ -47,7 +47,7 @@ Syber also did a great job of copying the fonts into the [u8g2 library](https://
 The Timer generates a serial number for a new game, passes this to the Widget ESP32 via CAN, then the Widget ESP can update the e-ink display.
 
 #### Audio output
-Although possible to put a speaker in the Timer (and I may still do this as an addition), it felt sensible to also move this function to the Widget controller. As this will be premanently seated in the case, so too can some good-sized speakers. And size this ESP32 will only have the serial number display to update, it will have a lot of free time (and memory) to play sound cues. Currently, the sound cues are some common game sounds (ticking, strike warnings and an explosion) but expanding this to cover other game sound effects will be trivial.
+Although possible to put a speaker in the Timer (and I may still do this as an addition), it felt sensible to also move this function to the Widget controller. As this will be permanently seated in the case, so too can some good-sized speakers. And size this ESP32 will only have the serial number display to update, it will have a lot of free time (and memory) to play sound cues. Currently, the sound cues are some common game sounds (ticking, strike warnings and an explosion) but expanding this to cover other game sound effects will be trivial.
 
 The audio amp is the [PAM8403](https://components101.com/modules/pam8403-stereo-audio-amplifier-module), driving an old laptop speaker for the moment. The sound library was created by [XTronical](https://www.xtronical.com/the-dacaudio-library-download-and-installation/) which is very powerful, being able to play multiple sounds at once from hex-encoded .wav files.
 
