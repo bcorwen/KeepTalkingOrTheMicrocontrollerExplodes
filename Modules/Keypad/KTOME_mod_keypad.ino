@@ -41,10 +41,6 @@
 #define MOD_STATUS_R   GPIO_NUM_32
 #define MOD_STATUS_G   GPIO_NUM_33
 
-//Temp debugging
-byte array_line = 0;
-long array_timer;
-
 // Game
 byte gamemode = 0;
 bool game_ready = false;
@@ -55,6 +51,7 @@ long strike_light_timer;
 long strike_light_flash = 1000;
 bool strike_light_state;
 bool manual_blink = false;
+bool explosion_fx = false;
 
 // Timer
 long thismillis;
@@ -100,13 +97,15 @@ long button_4_debounce;
 bool button_4_state;
 long button_debounce = 50;
 
-// CAN                      [ Module type ][ID][ unused ]
+// CAN                        [ Module type ][    ID   ][unused]
 
-//#define CAN_ID            0b00010000000000001000000000000 // ID for "Keypad" + 0100
-//#define CAN_MASK          0b10010000000000001000000000000 // Filter for the "Keypad"
-//
-#define CAN_ID            0b00010000000000010000000000000 // ID for "Keypad" + 1000
-#define CAN_MASK          0b10010000000000010000000000000 // Filter for the "Keypad"
+//#define CAN_ID            0b00010000000000010000000000000 // ID for "Keypad" + 1000
+//#define CAN_MASK          0b10010000000000010000000000000 // Filter for the "Keypad"
+
+#define CAN_MOD_TYPE  CAN_KEYPAD
+#define CAN_MOD_ID    1   // Number from 1 - 11
+int CAN_ID;
+int CAN_MASK;
 
 //**********************************************************************
 // FUNCTIONS: Main
@@ -119,6 +118,8 @@ void setup() {
   Serial.println("== KTOME: Module (Keypad) ==");
 
   // Start CAN bus
+  CAN_ID = CAN_MOD_TYPE + (CAN_MUID_1 >> (CAN_MOD_ID - 1));
+  CAN_MASK = CAN_ID + CAN_MASTER;
   ktomeCAN.id(CAN_ID, CAN_MASK);
   ktomeCAN.start();
   // start the CAN bus at 500 kbps
@@ -175,74 +176,36 @@ void setup() {
 
 void loop() {
 
-//  bool array_to_light[11][8] = {{0, 0, 0, 0, 0, 0, 0, 0},
-//    {0, 0, 0, 1, 0, 0, 0, 0},
-//    {0, 0, 0, 1, 0, 0, 0, 1},
-//    {0, 0, 1, 0, 0, 0, 0, 1},
-//    {0, 0, 1, 0, 0, 0, 1, 0},
-//    {0, 1, 0, 0, 0, 0, 1, 0},
-//    {0, 1, 0, 0, 0, 1, 0, 0},
-//    {1, 0, 0, 0, 0, 1, 0, 0},
-//    {1, 0, 0, 0, 1, 0, 0, 0},
-//    {0, 0, 0, 0, 1, 0, 0, 0},
-//    {0, 0, 0, 0, 0, 0, 0, 0}
-//  };
-//
-//  if (array_timer < millis()) {
-//    array_timer = millis() + 2000;
-//    digitalWrite(KEYPAD_LR1, array_to_light[array_line][0]);
-//    digitalWrite(KEYPAD_LR2, array_to_light[array_line][1]);
-//    digitalWrite(KEYPAD_LR3, array_to_light[array_line][2]);
-//    digitalWrite(KEYPAD_LR4, array_to_light[array_line][3]);
-//    digitalWrite(KEYPAD_LG1, array_to_light[array_line][4]);
-//    digitalWrite(KEYPAD_LG2, array_to_light[array_line][5]);
-//    digitalWrite(KEYPAD_LG3, array_to_light[array_line][6]);
-//    digitalWrite(KEYPAD_LG4, array_to_light[array_line][7]);
-//
-//    Serial.print(array_line);
-//    Serial.print(":");
-//    Serial.print(array_to_light[array_line][0], BIN);
-//    Serial.print(array_to_light[array_line][1], BIN);
-//    Serial.print(array_to_light[array_line][2], BIN);
-//    Serial.print(array_to_light[array_line][3], BIN);
-//    Serial.print(array_to_light[array_line][4], BIN);
-//    Serial.print(array_to_light[array_line][5], BIN);
-//    Serial.print(array_to_light[array_line][6], BIN);
-//    Serial.println(array_to_light[array_line][7], BIN);
-//
-//    array_line ++;
-//    if (array_line >= 11) {
-//      array_line = 0;
-//    }
-//  }
-
-
-    switch (gamemode) {
-      case 0:
-        carPark();
-        break;
-      case 1: // Module poll
-        Serial.println(F("Module search..."));
-        initialisation();
-        carPark();
-        break;
-      case 2: // Game in set-up
-        Serial.println(F("Game set-up..."));
-        gameReset();
-        blackout();
-        carPark();
-        break;
-      case 3: // Game running
-        Serial.println(F("Game starting!"));
-        game_running = true;
-        gameRunning();
-        break;
-      case 4: // Game wash-up: stand-by state, showing outcome and waiting for new game to be trigger from phone
-        game_ready = false;
-        //blackout();// Shut down module lights and "switch off"
-        carPark();
-        break;
-    }
+  switch (gamemode) {
+    case 0:
+      carPark();
+      break;
+    case 1: // Module poll
+      Serial.println(F("Module search..."));
+      initialisation();
+      carPark();
+      break;
+    case 2: // Game in set-up
+      Serial.println(F("Game set-up..."));
+      gameReset();
+      visual_fx(false);
+      carPark();
+      break;
+    case 3: // Game running
+      Serial.println(F("Game starting!"));
+      game_running = true;
+      gameRunning();
+      break;
+    case 4: // Game wash-up: stand-by state, showing outcome and waiting for new game to be trigger from phone
+      game_ready = false;
+      if (explosion_fx) {
+        visual_fx(true);
+      } else {
+        visual_fx(false);
+      }
+      carPark();
+      break;
+  }
 }
 
 void carPark() {
@@ -256,6 +219,10 @@ void carPark() {
       strike_light_state = !strike_light_state;
       digitalWrite(MOD_STATUS_R, strike_light_state);
       strike_light_timer += strike_light_flash;
+    }
+    else if (explosion_fx && gamemode == 4 && millis() > strike_light_timer) {
+      visual_fx(false);
+      explosion_fx = false;
     }
     delay (1);
   }
@@ -498,18 +465,19 @@ void defuseTrigger() {
   module_defused = true;
 }
 
-void blackout() {
-  digitalWrite(PIN_LED, LOW);
-  digitalWrite(MOD_STATUS_R, LOW);
-  digitalWrite(MOD_STATUS_G, LOW);
-  digitalWrite(KEYPAD_LR4, LOW);
-  digitalWrite(KEYPAD_LR3, LOW);
-  digitalWrite(KEYPAD_LR2, LOW);
-  digitalWrite(KEYPAD_LR1, LOW);
-  digitalWrite(KEYPAD_LG4, LOW);
-  digitalWrite(KEYPAD_LG3, LOW);
-  digitalWrite(KEYPAD_LG2, LOW);
-  digitalWrite(KEYPAD_LG1, LOW);
+void visual_fx(bool target_state) {
+  if (!target_state) { // Only turn off, never flash this when exploding
+    digitalWrite(MOD_STATUS_G, target_state);
+    digitalWrite(KEYPAD_LG4, target_state);
+    digitalWrite(KEYPAD_LG3, target_state);
+    digitalWrite(KEYPAD_LG2, target_state);
+    digitalWrite(KEYPAD_LG1, target_state);
+  }
+  digitalWrite(MOD_STATUS_R, target_state);
+  digitalWrite(KEYPAD_LR4, target_state);
+  digitalWrite(KEYPAD_LR3, target_state);
+  digitalWrite(KEYPAD_LR2, target_state);
+  digitalWrite(KEYPAD_LR1, target_state);
 }
 
 //**********************************************************************
@@ -598,6 +566,12 @@ void CANInbox() {
     } else if (ktomeCAN.can_msg[0] == 'Z') { // Game stop
       Serial.println("This module was asked to stop the game!");
       gamemode = 4;
+      if (ktomeCAN.can_msg[1] == '1') { // Explosion
+        explosion_fx = true;
+        strike_light_timer = thismillis + 100;
+      } else {
+        explosion_fx = false;
+      }
       holding = false;
     }
   }

@@ -67,8 +67,13 @@ int32_t buzz_timer;
 byte time_scale; // Quadruple the time scale: 4 = 1x speed (normal), 5 = 1.25x speed (1 strike), etc...
 int32_t blinktime;
 int32_t blinkperiod = 250; // Milliseconds
+int32_t timerblinktime;
+int32_t timerblinkperiod = 500;
+byte timerblinkcount = 0;
+bool timerblinkbool = true;
 bool blinkbool;
 int32_t buzzerinterrupt;
+bool explosion_fx = false;
 
 Adafruit_7segment timerdisp = Adafruit_7segment(); // Default pins: I2C SCL = GPIO22, I2C SDA = GPIO21
 
@@ -97,9 +102,9 @@ bool ind_car;
 //  {"FRK"}
 //};
 
-// CAN                      [ Module type ][    ID   ][>]unused
-#define CAN_ID            0b10000000000000000000000000000 // ID for Master (timer)
-#define CAN_MASK          0b10000000000000000000000000000 // Filter for the Master (timer)
+// CAN
+#define CAN_ID            CAN_MASTER
+#define CAN_MASK          CAN_MASTER
 
 // BLE
 bool deviceConnected = false;
@@ -247,6 +252,7 @@ void loop() {
       Serial.println(F("Game set-up..."));
       phoneSetup();
       gameReset();
+      visual_fx(false);
       carPark();
       break;
     case 3: // Game running
@@ -256,6 +262,11 @@ void loop() {
     case 4: // Game wash-up: stand-by state, showing outcome and waiting for new game to be trigger from phone
       // Show outcome
       stopMessages();
+      if (game_win) {
+        visual_fx(true);
+      } else {
+        visual_fx(false);
+      }
       carPark();
       break;
   }
@@ -266,6 +277,32 @@ void carPark() {
   Serial.println("Script parked - waiting for direction...");
   while (holding) {
     delay (1);
+  }
+  if (timerblinktime <= millis() && gamemode == 4) {
+    bool draw_colon;
+    if (game_win) {
+      if (timerblinkbool && timerblinkcount < 2) {
+        timerdisp.writeDigitNum(0, (int)(timestr.charAt(0) - 48));
+        timerdisp.writeDigitNum(1, (int)(timestr.charAt(1) - 48));
+        timerdisp.writeDigitNum(3, (int)(timestr.charAt(2) - 48));
+        timerdisp.writeDigitNum(4, (int)(timestr.charAt(3) - 48));
+        draw_colon = true;
+        timerblinkcount ++;
+      } else {
+        timerdisp.writeDigitNum(0, ' ');
+        timerdisp.writeDigitNum(1, ' ');
+        timerdisp.writeDigitNum(3, ' ');
+        timerdisp.writeDigitNum(4, ' ');
+        timerblinktime = millis() + timerblinkperiod;
+        timerblinkbool = false;
+        draw_colon = false;
+      }
+      timerdisp.drawColon(draw_colon);
+      timerdisp.writeDisplay();
+    } else {
+      visual_fx(false);
+      game_win = false;
+    }
   }
 }
 
@@ -692,6 +729,7 @@ void gameReset() {
     strike_limit = 3;
   }
   strikeUpdate();
+  timerblinkcount = 0;
 
   memset(module_solved_array, 0, sizeof(module_solved_array));
 
@@ -736,7 +774,36 @@ void gameRunning() {
     timerCalc();
 
   }
+}
 
+void visual_fx(bool target_state) {
+  bool draw_colon;
+  if (target_state) { // Triggers on explosion - flash lights on and ready for them to switch off
+    timerdisp.print(10000);
+    timerdisp.writeDisplay();
+    draw_colon = false;
+    digitalWrite(PIN_STRIKE_1, target_state);
+    digitalWrite(PIN_STRIKE_2, target_state);
+  } else { // Triggers on defusal and reset
+    if (game_win) {
+      timerdisp.writeDigitNum(0, '0');
+      timerdisp.writeDigitNum(1, '0');
+      timerdisp.writeDigitNum(3, '0');
+      timerdisp.writeDigitNum(4, '0');
+      timerblinktime = millis() + timerblinkperiod;
+      timerblinkbool = false;
+      draw_colon = false;
+    } else {
+      timerdisp.print(10000);
+      timerdisp.writeDisplay();
+      draw_colon = false;
+      digitalWrite(PIN_STRIKE_1, target_state);
+      digitalWrite(PIN_STRIKE_2, target_state);
+    }
+  }
+  timerdisp.drawColon(draw_colon);
+  timerdisp.writeDisplay();
+  
 }
 
 //**********************************************************************
@@ -754,11 +821,13 @@ void timerCalc() {
   //  Serial.print( " | Delta t: ");
   //  Serial.println(delta_t * (1 + strike_number * 0.25));
   //  Serial.println(micros());
-  Serial.print(timeleft);
-  Serial.print(" -> ");
-  Serial.println(timeleft / 1000);
-  Serial.print(" -> ");
-  Serial.println(timeleft / 1000000);
+  
+//  Serial.print(timeleft);
+//  Serial.print(" -> ");
+//  Serial.println(timeleft / 1000);
+//  Serial.print(" -> ");
+//  Serial.println(timeleft / 1000000);
+
   if (timeleft < 0) {
     timeleft = 0;
     // Lose Game!
@@ -855,9 +924,11 @@ void stopMessages() {
       }
     }
     CAN_message[1] = '1';
+    timerblinktime = thismillis + 100;
   } else if (timeleft == 0) { //  Game lost due to timer
     BLE_msg = "z 0";
     CAN_message[1] = '1';
+    timerblinktime = thismillis + 100;
   } else { // Game aborted
     BLE_msg = "z Z";
   }

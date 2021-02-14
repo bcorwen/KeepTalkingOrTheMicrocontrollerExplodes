@@ -36,9 +36,9 @@
 #define PIN_EINK_RST  GPIO_NUM_21
 #define PIN_EINK_BUSY GPIO_NUM_4
 
-// CAN                      [ Module type ][    ID   ][>]unused
-#define CAN_ID            0b00000000000000000000000000000 // ID for Master (timer)
-#define CAN_MASK          0b00000000000000000000000000000 // Filter for the Master (timer) - was 0b11111111111111100000000000000
+// CAN
+#define CAN_ID            CAN_WIDGETS
+#define CAN_MASK          CAN_WIDGETS
 
 GxEPD2_3C<GxEPD2_290c, GxEPD2_290c::HEIGHT> display(GxEPD2_290c(PIN_EINK_CS, PIN_EINK_DC, PIN_EINK_RST, PIN_EINK_BUSY));
 U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;
@@ -57,8 +57,11 @@ char serial_number[] = "XXXXXX";
 bool serial_inbox = false;
 byte strike_number;
 long thismillis;
+long tickmillis;
 long tockdelays[3] = {667, 600, 1000};
 bool tockdone = true;
+bool tickdone = false;
+long tickprotect;
 bool game_running = false;
 
 //**********************************************************************
@@ -127,16 +130,26 @@ void setup() {
 }
 
 void loop() {
+  thismillis = millis();
   CANInbox();
   if (serial_inbox) {
     draw_serial();
     serial_inbox = false;
   }
-  if (millis() >= thismillis + tockdelays[strike_number] && !tockdone) {
-    DacAudio.Play(&SoundTock);
-    tockdone = true;
+  if (game_running) {
+    if (thismillis >= (tickmillis + tockdelays[strike_number]) && !tockdone) {
+      DacAudio.Play(&SoundTock);
+      tockdone = true;
+    }
+    if (thismillis >= (tickmillis + 50 + (1000 / (1 + strike_number * 0.25)))) { // Sound a tick on cue in case we have a delay in CAN heartbeat
+      tickmillis = millis();
+      DacAudio.Play(&SoundTick);
+      tockdone = false;
+      tickdone = true;
+      tickprotect = tickmillis + (1000 / (1 + strike_number * 0.25)) - 100;
+    }
+    DacAudio.FillBuffer();
   }
-  DacAudio.FillBuffer();
 }
 
 //**********************************************************************
@@ -165,7 +178,7 @@ void CANInbox() {
     }
     else if (ktomeCAN.can_msg[0] == 'H') {
       // Play ticking sound
-      thismillis = millis();
+      tickmillis = millis();
       DacAudio.Play(&SoundTick);
       tockdone = false;
     }
