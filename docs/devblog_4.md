@@ -7,7 +7,7 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 ---
 
-[Prev post: Communications (part 1): CAN](devblog_3.md)
+[Prev post: Communications (part 1): CAN](devblog_3.md) | [Next post: Timer and Widgets module](devblog_5.md)
 
 ## 2021/02/06 - Communications (part 2): BLE
 This is another long overdue update covering about August to November 2020.
@@ -89,4 +89,4 @@ When the game is lost, a message "z 3" might be sent to the app. 'z' meaning the
 
 If you want to see more, I'd recommend [this video](https://www.youtube.com/watch?v=KqHBs5UcY2M) for a short run through of how the app controls the game, [this earlier video](https://www.youtube.com/watch?v=9nwYC-B_rjc) for a more immature description but with more detail on the BLE messages, and finally [this short one](https://www.youtube.com/watch?v=DGMcetRa-00) which includes the widget setup!
 
-[Prev post: Communications (part 1): CAN](devblog_3.md)
+[Prev post: Communications (part 1): CAN](devblog_3.md) | [Next post: Timer and Widgets module](devblog_5.md)
