@@ -26,7 +26,7 @@ On the physical side, there are three components:
 * The strike display - These are odd x-with-a-strikethrough shaped displays. I'm currently using a 2-digit 14-segment display to create this shape, which are also convenient due to library support and don't require something custom to be created to get the desired effect.
 * A buzzer/speaker - For the Arduino version, I had been using a piezo buzzer which did a basic job, however the Timer has no functional speaker (as we'll see later).
 
-It was planned for the Timer module to be self-contained, so allowing the module to be positioned anywhere in the bomb chassis. For the Timer to generate **and** control the serial number e-ink display, there would have to be another specialise bus created between all module slots and widget slots. This seemed very impractical, and so the serial number control was broken out into a new ESP32.
+It was planned for the Timer module to be self-contained, so allowing the module to be positioned anywhere in the bomb chassis. For the Timer to generate **and** control the serial number e-ink display, there would have to be another specialised bus wired in between all module slots and widget slots. This seemed very impractical, and so the serial number control was broken out into a new ESP32.
 
 > ![Timer, Widget and Keypad modules](https://i.imgur.com/PVWNPcI.jpg)
 > 
