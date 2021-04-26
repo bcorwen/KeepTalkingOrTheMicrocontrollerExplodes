@@ -51,7 +51,7 @@ To set up BLE comms, one device is configured as a server with the others as cli
 
 To send data, a service and a characteristic must be created. A characteristic is essentially storage for a value, and it will have a certain method of interaction (they could be read from, written to, cause a notification, etc). A service is simply a collection of characteristics.
 
-Lastly, a message sent via BLE can be a maximum of 23 bytes. Again not large, but more that with CAN and with a little careful planning this is plenty!
+Lastly, a message sent via BLE can be a maximum of 23 bytes. Again not large, but more than with CAN and with a little careful planning this is plenty!
 
 ### How I used BLE for KTOME
 
