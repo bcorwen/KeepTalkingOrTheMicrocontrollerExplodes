@@ -47,7 +47,7 @@ Syber also did a great job of copying the fonts into the [u8g2 library](https://
 The Timer generates a serial number for a new game, passes this to the Widget ESP32 via CAN, then the Widget ESP can update the e-ink display.
 
 #### Audio output
-Although possible to put a speaker in the Timer (and I may still do this as an addition), it felt sensible to also move this function to the Widget controller. As this will be permanently seated in the case, so too can some good-sized speakers. And size this ESP32 will only have the serial number display to update, it will have a lot of free time (and memory) to play sound cues. Currently, the sound cues are some common game sounds (ticking, strike warnings and an explosion) but expanding this to cover other game sound effects will be trivial.
+Although possible to put a speaker in the Timer (and I may still do this as an addition), it felt sensible to also move this function to the Widget controller. As this will be permanently seated in the case, so too can some good-sized speakers. And since this ESP32 will only have the serial number display to update, it will have a lot of free time (and memory) to play sound cues. Currently, the sound cues are some common game sounds (ticking, strike warnings and an explosion) but expanding this to cover other game sound effects will be trivial.
 
 The audio amp is the [PAM8403](https://components101.com/modules/pam8403-stereo-audio-amplifier-module), driving an old laptop speaker for the moment. The sound library was created by [XTronical](https://www.xtronical.com/the-dacaudio-library-download-and-installation/) which is very powerful, being able to play multiple sounds at once from hex-encoded .wav files.
 
