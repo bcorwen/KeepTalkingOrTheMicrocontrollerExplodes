@@ -7,7 +7,7 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 ---
 
-[Prev post: Communications (part 2): BLE](devblog_4.md)
+[Prev post: Communications (part 2): BLE](devblog_4.md) | [Next post: Object-Oriented Programming revamp, CAN shake-up and the Button module](devblog_6.md)
 
 ## 2021/02/06 - Timer and Widgets module
 This is another catch-up update covering about August 2020 to January 2021.
@@ -55,4 +55,4 @@ The Widget controller listens on the CAN bus for cues from the Timer, then plays
 
 [See it all in action here!](https://www.youtube.com/watch?v=DGMcetRa-00)
 
-[Prev post: Communications (part 2): BLE](devblog_4.md)
+[Prev post: Communications (part 2): BLE](devblog_4.md) | [Next post: Object-Oriented Programming revamp, CAN shake-up and the Button module](devblog_6.md)
