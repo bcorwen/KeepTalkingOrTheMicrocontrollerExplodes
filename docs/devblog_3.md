@@ -176,7 +176,7 @@ Modules would be registered to the bus with its type and a unique number, e.g. A
 
 As the timer is assigned the unofficial "Master" of the network, it typically initiates a back-and-forth with the other modules.
 
-One of the first messages the Timer would be a 'P' to see which modules are connected to the bus. As this needs to pick up every module, it sends 'P' with the message ID of `0b01111111111111111111111111111` - encompassing the ID of every module, bar the Timer itself.
+One of the first messages sent by the Timer would be a 'P' to see which modules are connected to the bus. As this needs to pick up every module, it sends 'P' with the message ID of `0b01111111111111111111111111111` - encompassing the ID of every module, bar the Timer itself.
 
 A slave module, when replying to the Timer, is programmed to include its own ID in the message ID. For example, on receiving the 'P' message, the Keypad replies to the Timer to let it know it is connected. It sends 'p' in a message with ID `0b10010000000000000010000000000`. The Timer receives this as the first bit is a one, it removes the first one and so it is left with the ID of the Keypad! The Timer can now store this ID and remember which modules are plugged in, and so can tell how many modules are attached, which module types and specifically address this module in particular (when the manual setup of attaching the correct Keypad keys is required).
 
