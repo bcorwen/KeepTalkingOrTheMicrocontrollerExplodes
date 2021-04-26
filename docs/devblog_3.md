@@ -133,7 +133,9 @@ The first 18 bits are used to define the module type (with 3 of these currently 
 
 For example:
 `0b10000000000000000000000000000` is the Timer
+
 `0b01000000000000000010000000000` is the 1st Wires module
+
 `0b01000000000000000000001000000` is the 5th Wires module
 
 A special case: the ESP32 controlling the Widgets is given a blank ID (all zeroes). It will also always be present but will not transmit any messages, and so this ID is acceptable as we'll discuss later.
