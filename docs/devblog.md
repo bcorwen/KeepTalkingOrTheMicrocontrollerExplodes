@@ -7,7 +7,9 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 ---
 
-### [2021/04/26 - Object-Oriented Programming revamp, CAN shake-up and the Button module](devblog_6.md)
+### [2021/02/06 - The Button module](devblog_7.md)
+
+### [2021/04/26 - Object-Oriented Programming revamp, CAN shake-up and the Debugger](devblog_6.md)
 
 ### [2021/02/06 - Timer and Widgets module](devblog_5.md)
 
