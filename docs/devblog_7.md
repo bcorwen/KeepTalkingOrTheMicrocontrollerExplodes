@@ -23,7 +23,7 @@ One piece of info is the widget info to determine the correct input. The current
 
 The other piece of info to fetch is the digits displayed on the Timer. The correct timing to release a long hold is dependent on whether the displayed time has a particular digit. Currently, when the held button is released, a timer request is sent to the Timer module which replies to the Button with the displayed digits. The Button can then check if the correct digit is present before declaring the solve or strike. This requires more testing at the time of writing this, but the response feels very fast. One failsafe I have already programmed is the case when a Button is solved as the last module, but the delay moves the timer on so it apperas as if the Button was solved when it shouldn't. When the timer digits are requested, the Timer stores the digits in a variable. If the module which requested those digits transmits a solve and is the last module to be solved, then the timer display will freeze on the stored digits rather than whatever the timer might have ticked over onto.
 
-> ![Button strip lighting up during a long hold](https://imgur.com/OInxHsp)
+> ![Button strip lighting up during a long hold](https://i.imgur.com/OInxHsp.jpg)
 >  
 > Button module testing, with the strip lighting up during a long hold
 
