@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"name": "KTOME Keypad",
+			"path": "..\\..\\KTOME Keypad"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.tcc": "cpp",
+			"numeric": "cpp"
+		}
+	}
+}
