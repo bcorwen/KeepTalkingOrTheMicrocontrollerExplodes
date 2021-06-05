@@ -2,6 +2,10 @@
 #include <CAN.h>
 #include <KTOME_CAN.h>
 
+KTOME_CAN::KTOME_CAN() {
+	
+}
+
 bool KTOME_CAN::start() {
 	bool success;
 	pin_rx = 27;
@@ -18,14 +22,19 @@ bool KTOME_CAN::start(uint8_t rx, uint8_t tx) {
 	return success;
 }
 
-void KTOME_CAN::id(uint32_t id, uint32_t mask) {
+void KTOME_CAN::setId(uint32_t id, uint32_t mask) {
 	can_id = id;
 	can_mask = mask;
 }
 
+void KTOME_CAN::setId(uint32_t id) {
+	can_id = id;
+	//can_mask = id;
+}
+
 bool KTOME_CAN::init() {
 	CAN.setPins(pin_rx, pin_tx);
-	if (!CAN.begin(500E3)) {
+	if (!CAN.begin(1000E3)) {
 		// CAN failed to start
 		return false;
 	}
@@ -56,18 +65,24 @@ void onReceive(int packet_size) {
 }
 
 void KTOME_CAN::handleISR(int packet_size) {
-  if ((CAN.packetId() & can_mask) == can_id) {
-    for (byte i = 0; i < packet_size; i++) {
-      buffer_msg[i][buffer_w] = CAN.read();
-    }
-    buffer_msg[packet_size][buffer_w] = '\0';
-    buffer_msg_id[buffer_w] = CAN.packetId();
-    if (buffer_w == 15) {
-      buffer_w = 0;
-    } else {
-      buffer_w++;
-    }
-  }
+	if ((CAN.packetId() & (can_id & (can_ids.All_modules | can_ids.Master))) == (can_id & (can_ids.All_modules | can_ids.Master))) { // Filter for module type
+		// Serial.println("Match module type");
+		if (((CAN.packetId() & can_ids.MUID_15) == 0) || ((CAN.packetId() & can_ids.MUID_15) == (can_id & can_ids.MUID_15)) || ((can_id & can_ids.All_modules) == 0)) { // Filter for module number
+			for (byte i = 0; i < packet_size; i++) {
+			  buffer_msg[i][buffer_w] = CAN.read();
+			}
+			buffer_msg[packet_size][buffer_w] = '\0';
+			buffer_msg_id[buffer_w] = CAN.packetId();
+			if (buffer_w == 15) {
+			  buffer_w = 0;
+			} else {
+			  buffer_w++;
+			}
+		}
+	}
+	// Serial.print("Received packet with id 0b");
+	// padZeros(CAN.packetId());
+	// Serial.println(CAN.packetId(), BIN);
 }
 
 void KTOME_CAN::receive() {
@@ -91,7 +106,7 @@ void KTOME_CAN::receive() {
 
 }
 
-bool KTOME_CAN::messageWaiting() {
+bool KTOME_CAN::isMessageWaiting() {
 	if (buffer_r != buffer_w) {
 		return true;
 	} else {
@@ -115,4 +130,5 @@ void KTOME_CAN::padZeros(uint32_t id) {
   }
 }
 
+CAN_IDS can_ids = CAN_IDS();
 KTOME_CAN ktomeCAN = KTOME_CAN();
