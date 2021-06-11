@@ -14,7 +14,7 @@ The Simon module also didn't take long to code, however getting around to this p
 
 Just like the Button, I had this module working in the prototype, and yet the changes in the structure meant that very few lines of code were directly reused. The custom LED library I wrote for this project was excellent in handling the light blinking, so although there wa sa lot to re-write, it was fairly painless to get running quickly!
 
-> ![Simon test with the Debugger](https://i.imgur.com/nY7y3fK.mp4)
+> ![Simon test with the Debugger](https://user-images.githubusercontent.com/30636388/121750802-f8d5c900-cb04-11eb-99bb-4528ef327920.jpg)
 > 
 > Simon test with the Debugger
 
