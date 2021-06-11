@@ -15,7 +15,7 @@ The Simon module also didn't take long to code, however getting around to this p
 Just like the Button, I had this module working in the prototype, and yet the changes in the structure meant that very few lines of code were directly reused. The custom LED library I wrote for this project was excellent in handling the light blinking, so although there wa sa lot to re-write, it was fairly painless to get running quickly!
 
 > ![Simon test with the Debugger](https://i.imgur.com/nY7y3fK.mp4)
->  
+> 
 > Simon test with the Debugger
 
 The key feature to ensure was working was the CAN comms. Much like the button, the solution to Simon requires some additional info, namely the presence of a vowel in the serial number and the current number of strikes. The module would listen out for these prompts on the CAN bus, extract the data and update the solution table.
