@@ -7,7 +7,7 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 ---
 
-[Prev post: Moving to the ESP32](devblog_2.md) | [Next post: Communications (part 2): BLE](devblog_4.md)
+[Prev post: Moving to the ESP32 (+ The Keypad module)](devblog_2.md) | [Next post: Communications (part 2): BLE](devblog_4.md)
 
 ## 2021/01/31 - Communications (part 1): CAN
 Another catch-up update covering about August to November 2020.
@@ -189,4 +189,4 @@ One of my brief video updates covers much of what is discussed here in context; 
 
 And since I started with the Keypad module as our only slave and that we have been mentioning manual setup in this post and last, it's no spoiler that I needed to test that Keypad module by knowing which symbols are being generated and whether it is correctly striking or defusing. After thinking of options, it seemed plausible to create a phone app which could pair to the Timer via Bluetooth and give the user a visual read-out of the Keypad symbols. The next blog post will cover the creation of the companion app, how to communicate with the ESP32 with Bluetooth Low Energy, and how the message protocol was created.
 
-[Prev post: Moving to the ESP32](devblog_2.md) | [Next post: Communications (part 2): BLE](devblog_4.md)
+[Prev post: Moving to the ESP32 (+ The Keypad module)](devblog_2.md) | [Next post: Communications (part 2): BLE](devblog_4.md)
