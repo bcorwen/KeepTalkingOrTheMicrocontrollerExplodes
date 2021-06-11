@@ -17,6 +17,6 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 ### [2021/01/31 - Communications (part 1): CAN](devblog_3.md)
 
-### [2021/01/24 - Moving to the ESP32 and the new bomb structure](devblog_2.md)
+### [2021/01/24 - Moving to the ESP32 and the new bomb structure (+ The Keypad module)](devblog_2.md)
 
 ### [2021/01/23 - Origins](devblog_1.md)
