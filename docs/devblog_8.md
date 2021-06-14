@@ -7,7 +7,7 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 ---
 
-[Prev post: The Button module](devblog_7.md)
+[Prev post: The Button module](devblog_7.md) | [Next post: The Wires module](devblog_9.md)
 
 ## 2021/06/11 - The Simon module
 The Simon module also didn't take long to code, however getting around to this post did! I had this one running back in early May but it's only now I've remembered to write it up.
@@ -24,4 +24,4 @@ Maybe a video of the three modules up to this point would demonstrate [something
 
 As Simon only took a couple of days to build and another one to polish, it was time to move on to finish the last module I coded in the prototype - The Wires.
 
-[Prev post: The Button module](devblog_7.md)
+[Prev post: The Button module](devblog_7.md) | [Next post: The Wires module](devblog_9.md)
