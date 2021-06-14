@@ -7,6 +7,8 @@ I'm currently making short update videos on progress on [my Youtube playlist](ht
 
 ---
 
+### [2021/06/14 - The Wires module](devblog_9.md)
+
 ### [2021/06/11 - The Simon module](devblog_8.md)
 
 ### [2021/04/27 - The Button module](devblog_7.md)
