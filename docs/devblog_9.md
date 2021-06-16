@@ -26,6 +26,8 @@ One of the most time consuming parts of bringing this module fully online is pre
 
 One key deviation from Wires and the other manual setup modules so far is the fact that this module can test and should verify the connected wires before game start. Say it expects 5 wires with the 3rd connection empty. Well the ESP can detect that and when the user presses the button on the app saying that the module is setup, then the ESP can double check this. It could be a very important check to avoid an instant strike during gameplay due to a faulty connector. This caused a huge headache with the Timer code so far, and so got a huge overhaul to have a better flow as messages pass over CAN and BLE.
 
+It's been tested to work with actual wire cutters and has been coded to ignore any disconnected wires reconnecting (say if you pulled a wire out but it momentarily connected back up, which is easy to do on the timescales microcontrollers work). It's a satifying "snip" sound to defuse the module and the whole bomb too!
+
 Now I'm sick of looking at breadboards and a tangle of wires. Why not try to switch tack away from electronics and coding, and on to something more physical?
 
 [Prev post: The Simon module](devblog_8.md)
