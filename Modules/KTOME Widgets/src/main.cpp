@@ -56,6 +56,8 @@ XT_Wav_Class SoundTock(TockWav);
 XT_Wav_Class SoundStrike(StrikeWav);
 XT_Wav_Class SoundExpl(ExplWav);
 XT_Wav_Class SoundWin(WinWav);
+XT_Wav_Class SoundAct(NeedyAct);
+XT_Wav_Class SoundWarn(NeedyWarn);
 XT_Instrument_Class SimonSays;
 int8_t PROGMEM ToneRed[] = {NOTE_CS5, SCORE_END};
 int8_t PROGMEM ToneBlue[] = {NOTE_E5, SCORE_END};
@@ -69,6 +71,10 @@ bool simon_delay;
 byte simon_sound;
 bool simon_cued;
 int32_t simon_time;
+bool needy_cued;
+byte needy_sound;
+bool needy_repeat;
+int32_t needy_time;
 
 char serial_number[] = "XXXXXX";
 bool serial_inbox = false;
@@ -90,6 +96,7 @@ void draw_serial() {
     u8g2Fonts.setFontMode(1);
     u8g2Fonts.setFontDirection(1);
 
+    Serial.println("About to draw...");
     display.firstPage();
     do {
         display.fillScreen(colorWhite);
@@ -178,13 +185,25 @@ void CANInbox() {
             game_running = true;
             strike_number = 0;
         } else if (ktomeCAN.can_msg[0] == 'u') {
-            simon_sound = ktomeCAN.can_msg[1] - '0';
-            simon_delay = ktomeCAN.can_msg[2] - '0';
-            simon_cued = true;
-            if (simon_delay) {
-                simon_time = millis() + 100;
+            if (ktomeCAN.can_msg[1] < '5') {
+                simon_sound = ktomeCAN.can_msg[1] - '0';
+                simon_delay = ktomeCAN.can_msg[2] - '0';
+                simon_cued = true;
+                if (simon_delay) {
+                    simon_time = millis() + 100;
+                } else {
+                    simon_time = millis();
+                }
             } else {
-                simon_time = millis();
+                needy_sound = ktomeCAN.can_msg[1] - '5';
+                Serial.println(needy_sound);
+                needy_cued = true;
+                needy_time = millis();
+                if (needy_sound == 1) {
+                    needy_repeat = true;
+                } else {
+                    needy_repeat = false;
+                }
             }
         }
     }
@@ -194,30 +213,50 @@ void playSimon() {
     if (simon_cued && (millis() >= simon_time)) {
         simon_cued = false;
         switch (simon_sound) {
-        case 0:
-            DacAudio.RemoveFromPlayList(&SimonBlue);
-            DacAudio.RemoveFromPlayList(&SimonGreen);
-            DacAudio.RemoveFromPlayList(&SimonYellow);
-            DacAudio.Play(&SimonRed);
-            break;
-        case 1:
-            DacAudio.RemoveFromPlayList(&SimonRed);
-            DacAudio.RemoveFromPlayList(&SimonGreen);
-            DacAudio.RemoveFromPlayList(&SimonYellow);
-            DacAudio.Play(&SimonBlue);
-            break;
-        case 2:
-            DacAudio.RemoveFromPlayList(&SimonRed);
-            DacAudio.RemoveFromPlayList(&SimonBlue);
-            DacAudio.RemoveFromPlayList(&SimonYellow);
-            DacAudio.Play(&SimonGreen);
-            break;
-        case 3:
-            DacAudio.RemoveFromPlayList(&SimonRed);
-            DacAudio.RemoveFromPlayList(&SimonBlue);
-            DacAudio.RemoveFromPlayList(&SimonGreen);
-            DacAudio.Play(&SimonYellow);
-            break;
+            case 0:
+                DacAudio.RemoveFromPlayList(&SimonBlue);
+                DacAudio.RemoveFromPlayList(&SimonGreen);
+                DacAudio.RemoveFromPlayList(&SimonYellow);
+                DacAudio.Play(&SimonRed);
+                break;
+            case 1:
+                DacAudio.RemoveFromPlayList(&SimonRed);
+                DacAudio.RemoveFromPlayList(&SimonGreen);
+                DacAudio.RemoveFromPlayList(&SimonYellow);
+                DacAudio.Play(&SimonBlue);
+                break;
+            case 2:
+                DacAudio.RemoveFromPlayList(&SimonRed);
+                DacAudio.RemoveFromPlayList(&SimonBlue);
+                DacAudio.RemoveFromPlayList(&SimonYellow);
+                DacAudio.Play(&SimonGreen);
+                break;
+            case 3:
+                DacAudio.RemoveFromPlayList(&SimonRed);
+                DacAudio.RemoveFromPlayList(&SimonBlue);
+                DacAudio.RemoveFromPlayList(&SimonGreen);
+                DacAudio.Play(&SimonYellow);
+                break;
+        }
+    }
+}
+
+void playNeedy() {
+    if (needy_cued && millis() >= needy_time) {
+        needy_cued = false;
+        switch (needy_sound) {
+            case 0:
+                DacAudio.Play(&SoundAct);
+                break;
+            case 1:
+                DacAudio.Play(&SoundWarn);
+                break;
+        }
+        if (needy_repeat) {
+            Serial.println("Repeat this in 1 sec...");
+            needy_time += 1500;
+            needy_repeat = false;
+            needy_cued = true;
         }
     }
 }
@@ -229,9 +268,19 @@ void playSimon() {
 void setup() {
     // Start serial connection
     Serial.begin(115200);
-    while (!Serial)
-        ;
+    // while (!Serial);
     Serial.println("== KTOME: Widget ==");
+
+    serial_number[0] = 'K';
+    serial_number[1] = 'T';
+    serial_number[2] = '0';
+    serial_number[3] = 'M';
+    serial_number[4] = 'E';
+    serial_number[5] = '1';
+    Serial.println("Serial set!");
+
+    draw_serial();
+    Serial.println("Serial drawn!");
 
     // Start CAN bus
     CAN_ID = can_ids.Widgets;
@@ -258,6 +307,8 @@ void setup() {
 
     SimonSays.SetInstrument(3);
     SimonSays.SetWaveForm(WAVE_SINE);
+
+    SoundWarn.Repeat=2;
 }
 
 void loop() {
@@ -287,5 +338,6 @@ void loop() {
         }
     }
     playSimon();
+    playNeedy();
     DacAudio.FillBuffer();
 }

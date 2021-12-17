@@ -2,12 +2,12 @@
 //
 //  Keep Talking Or the Microcontroller Explodes!
 //
-//    - bcorwen, 28/03/21
+//    - bcorwen, 18/10/21
 //======================================================================
 //
 //  Module: Debugger (MASTER)
 //
-//  version 0.6.0
+//  version 0.6.4
 //
 //  
 //
@@ -112,7 +112,7 @@ Switch encoder_press;
 LiquidCrystal myLCD(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D0, PIN_LCD_D1, PIN_LCD_D2, PIN_LCD_D3);
 
 int8_t menu_selected = 0;
-const byte menu_max = 13;
+const byte menu_max = 16;
 
 String menu_choice[menu_max] = {"Poll modules  ",
                                 "Init game     ",
@@ -127,6 +127,9 @@ String menu_choice[menu_max] = {"Poll modules  ",
                                 "Send heartbeat",
                                 "Set time: 0238",
                                 "Set time: 0451",
+                                "Needy trigger ",
+                                "Send Defuse   ",
+                                "Send Strike   "
                                 };
 
 char menu_can_msg[menu_max][9] = {"P",
@@ -142,9 +145,12 @@ char menu_can_msg[menu_max][9] = {"P",
                                   "H",
                                   "T0238",
                                   "T0451",
+                                  "N",
+                                  "D",
+                                  "X"
                                   };
 
-byte menu_can_lng[menu_max] = {1, 1, 1, 1, 1, 2, 2, 8, 7, 2, 1, 5, 5};
+byte menu_can_lng[menu_max] = {1, 1, 1, 1, 1, 2, 2, 8, 7, 2, 1, 5, 5, 1, 1, 1};
 
 char time_to_send[6] = "T0238";
 
@@ -224,19 +230,19 @@ void loop() {
   if (encoder_press.hasChanged()) {
     if (encoder_press.isPressed()) {
       // Serial.println("Encoder press");
-      if (menu_selected < 11) {
+      // if (menu_selected < 11) {
         digitalWrite(PIN_LED, HIGH);
         ktomeCAN.send((can_ids.All_modules), menu_can_msg[menu_selected], menu_can_lng[menu_selected]);
         digitalWrite(PIN_LED, LOW);
-      } else if (menu_selected == 11) {
-        time_to_send[2] = '2';
-        time_to_send[3] = '3';
-        time_to_send[4] = '8';
-      } else {
-        time_to_send[2] = '4';
-        time_to_send[3] = '5';
-        time_to_send[4] = '1';
-      }
+      // } else if (menu_selected == 11) {
+      //   time_to_send[2] = '2';
+      //   time_to_send[3] = '3';
+      //   time_to_send[4] = '8';
+      // } else {
+      //   time_to_send[2] = '4';
+      //   time_to_send[3] = '5';
+      //   time_to_send[4] = '1';
+      // }
     }
   }
 
