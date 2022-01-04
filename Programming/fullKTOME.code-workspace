@@ -1,0 +1,41 @@
+{
+	"folders": [
+		{
+			"path": "Modules\\KTOME Wires"
+		},
+		{
+			"path": "Modules\\KTOME Button"
+		},
+		{
+			"path": "Modules\\KTOME CWires"
+		},
+		{
+			"path": "Modules\\KTOME Debugger"
+		},
+		{
+			"path": "Modules\\KTOME Keypad"
+		},
+		{
+			"path": "Modules\\KTOME Memory"
+		},
+		{
+			"path": "Modules\\KTOME Morse"
+		},
+		{
+			"path": "Modules\\KTOME Password"
+		},
+		{
+			"path": "Modules\\KTOME Simon"
+		},
+		{
+			"path": "Modules\\KTOME Timer"
+		},
+		{
+			"path": "Modules\\KTOME Vent"
+		},
+		{
+			"path": "Modules\\KTOME Widgets"
+		}
+	],
+    "settings": {}
+}
