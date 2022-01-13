@@ -22,10 +22,10 @@ The current plan is to have each module run with its own ESP32 microcontroller, 
 - [ ] Complete standard modules
 - [ ] Complete needy modules
 ### Design
-- [ ] Basic module designs (blank faceplate and box)
-- [ ] Case and edgework
+- [x] Basic module designs (blank faceplate and box)
+- [x] Case and edgework
 - [ ] Find electronics which matches game as closely as possible
 - [ ] Power solution
-- [ ] Module connectors
+- [x] Module connectors
 - [ ] Complete standard modules
 - [ ] Complete needy modules
