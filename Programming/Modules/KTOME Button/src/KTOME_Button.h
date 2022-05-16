@@ -29,8 +29,8 @@ class KTOME_Button {
     void stripOn(bool strip_power);
 		
 	public:
-    void start(); // Initialise Keypad object
-    void generate(); // Generate a game (i.e. keypad_setup)
+    void start(); // Initialise Button object
+    void generate(); // Generate a game (i.e. button_setup)
     void reset();
     byte timerDigits(String timer_digits);
     void findSolution(bool ind_frk, bool ind_car, byte bat_num); // Call after receiving widget info to be able to determine the correct input

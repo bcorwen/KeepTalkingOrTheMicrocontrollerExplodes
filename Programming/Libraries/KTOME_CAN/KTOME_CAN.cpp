@@ -80,9 +80,9 @@ void KTOME_CAN::handleISR(int packet_size) {
 			}
 		}
 	}
-	// Serial.print("Received packet with id 0b");
-	// padZeros(CAN.packetId());
-	// Serial.println(CAN.packetId(), BIN);
+	Serial.print("Received packet with id 0b");
+	padZeros(CAN.packetId());
+	Serial.println(CAN.packetId(), BIN);
 }
 
 void KTOME_CAN::receive() {

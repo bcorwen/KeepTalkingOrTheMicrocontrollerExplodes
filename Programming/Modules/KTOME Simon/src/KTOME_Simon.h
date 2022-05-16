@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <KTOME_common.h>
 
-#define SIMON_S_R   GPIO_NUM_15
+#define SIMON_S_R   GPIO_NUM_12
 #define SIMON_S_B   GPIO_NUM_2
 #define SIMON_S_G   GPIO_NUM_0
 #define SIMON_S_Y   GPIO_NUM_4

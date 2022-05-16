@@ -31,7 +31,7 @@
 // GLOBAL VARIABLES
 //**********************************************************************
 
-#define PIN_LED_CAN GPIO_NUM_12
+#define PIN_LED_CAN GPIO_NUM_15
 #define MOD_STATUS_R GPIO_NUM_32
 #define MOD_STATUS_G GPIO_NUM_33
 
@@ -94,21 +94,21 @@ void setup()
 {
     // Start serial connection
     Serial.begin(115200);
-    while (!Serial)
-        ;
+    // while (!Serial)
+    //     ;
     Serial.println("== KTOME: Module (Simon) ==");
 
     // Start CAN bus
     CAN_ID = CONFIG_CAN_MODULE_TYPE | CONFIG_CAN_MODULE_NUM;
     ktomeCAN.setId(CAN_ID);
-    ktomeCAN.start();
+    ktomeCAN.start(14, 13);
     // start the CAN bus at 500 kbps
-    if (!ktomeCAN.start())
-    {
-        Serial.println("Starting CAN failed!");
-        while (1)
-            ;
-    }
+    // if (!ktomeCAN.start())
+    // {
+    //     Serial.println("Starting CAN failed!");
+    //     while (1)
+    //         ;
+    // }
     Serial.print("My ID is:   0b");
     ktomeCAN.padZeros(CAN_ID);
     Serial.println(CAN_ID, BIN);
@@ -431,7 +431,7 @@ void CANInbox()
         }
         else if (ktomeCAN.can_msg[0] == 'A' && gamemode == 2)
         { // Game start
-            Serial.println("This module was asked to start the game!");
+            // Serial.println("This module was asked to start the game!");
             //
             gamemode = 3;
             holding = false;

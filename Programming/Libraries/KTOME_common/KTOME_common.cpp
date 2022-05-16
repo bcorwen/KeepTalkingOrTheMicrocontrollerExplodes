@@ -1,4 +1,7 @@
 #include <Arduino.h>
+#ifndef FastLED
+#include <FastLED.h>
+#endif
 #include <KTOME_common.h>
 
 Led::Led() {
@@ -358,6 +361,247 @@ void LedPWM::update() {
 
 void LedPWM::writePulse(int32_t duty_cycle) {
 	ledcWrite(pwm_channel, constrain(duty_cycle, 0, pwm_res_max));
+}
+
+FLed::FLed () {
+
+}
+
+void FLed::init(CRGB *leds, byte led_length) {
+    this->led_length = led_length;
+    leds_addr = leds;
+    // leds[led_length];
+    FastLED.addLeds<WS2812B, 13, GRB>(leds_addr, led_length).setCorrection( TypicalLEDStrip );
+    FastLED.setBrightness( 8 );
+}
+
+void FLed::write(byte led_no, CRGB colour) {
+    leds_addr[led_no] = colour;
+    this->blink_enable[led_no] = 0;
+}
+
+void FLed::writergb(byte led_no, uint8_t clr_r, uint8_t clr_g, uint8_t clr_b) {
+    leds_addr[led_no].setRGB(clr_r, clr_g, clr_b);
+    this->blink_enable[led_no] = 0;
+}
+
+CRGB FLed::read(byte led_no) {
+    return leds_addr[led_no];
+}
+
+void FLed::update() {
+    // FastLED.show();
+}
+
+FLedBlinkable::FLedBlinkable() : FLed() {
+
+}
+
+void FLedBlinkable::blink(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time) {
+	this->blink_time_1[led_no] = blink_time;
+	this->blink_time_2[led_no] = blink_time;
+    this->colour1[led_no] = colour1;
+    this->colour2[led_no] = colour2;
+	this->blink_cycles[led_no] = -1;
+	this->blink_change_time[led_no] = millis() + blink_time;
+    this->blink_enable[led_no] = 1;
+    this->state[led_no] = 0;
+	// blinkStart(led_no, start_state);
+}
+
+void FLedBlinkable::blink(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time, int8_t blink_cycles) {
+	this->blink_time_1[led_no] = blink_time;
+	this->blink_time_2[led_no] = blink_time;
+    this->colour1[led_no] = colour1;
+    this->colour2[led_no] = colour2;
+	this->blink_cycles[led_no] = blink_cycles;
+	this->blink_change_time[led_no] = millis() + blink_time;
+    this->blink_enable[led_no] = 1;
+    this->state[led_no] = 0;
+	// blinkStart(led_no, start_state);
+}
+
+void FLedBlinkable::blink(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time_1, uint32_t blink_time_2, int8_t blink_cycles) {
+	this->blink_time_1[led_no] = blink_time_1;
+	this->blink_time_2[led_no] = blink_time_2;
+    this->colour1[led_no] = colour1;
+    this->colour2[led_no] = colour2;
+	this->blink_cycles[led_no] = blink_cycles;
+	this->blink_change_time[led_no] = millis() + blink_time_1;
+    this->blink_enable[led_no] = 1;
+    this->state[led_no] = 0;
+	// blinkStart(led_no, start_state);
+}
+
+void FLedBlinkable::update() {
+    for (byte ii = 0; ii < led_length; ii++) {
+        if (blink_enable[ii] == 1) {
+            uint32_t thismillis = millis();
+            if (thismillis >= blink_change_time[ii]) {
+                if (state[ii] == 0) { // Need to switch to colour 1
+                    blink_change_time[ii] += blink_time_1[ii];
+                    leds_addr[ii] = colour1[ii];
+                    state[ii] = 1;
+                    // Serial.printf("Led %i changed to %lu\n", ii, colour1);
+                } else { // Need to switch to colour 2
+                    blink_change_time[ii] += blink_time_2[ii];
+                    leds_addr[ii] = colour2[ii];
+                    state[ii] = 0;
+                    // Serial.printf("Led %i changed to %lu\n", ii, colour2);
+                }
+                if (blink_cycles[ii] > 0) {
+                    blink_cycles[ii] --;
+                }
+            }
+        }
+        if (blink_cycles[ii] == 0) {
+            blink_enable[ii] = 0;
+        }
+    }
+    // FastLED.show();
+}
+
+FLedPWM::FLedPWM() : FLedBlinkable() {
+
+}
+
+void FLedPWM::fade(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time_1, uint32_t blink_time_2, uint32_t blink_time_1_2, uint32_t blink_time_2_1) {
+    this->colour1[led_no] = colour1;
+    this->colour2[led_no] = colour2;
+    this->blink_time_1[led_no] = blink_time_1;
+	this->blink_time_2[led_no] = blink_time_2;
+    this->blink_time_1_2[led_no] = blink_time_1_2;
+    this->blink_time_2_1[led_no] = blink_time_2_1;
+	this->blink_cycles[led_no] = -1;
+	this->blink_change_time[led_no] = millis() + blink_time_1;
+    this->blink_enable[led_no] = 2;
+    this->state[led_no] = 0;
+    this->pulse_end_state[led_no] = 0;
+}
+
+void FLedPWM::fade(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time_1, uint32_t blink_time_2, uint32_t blink_time_1_2, uint32_t blink_time_2_1, byte start_state) {
+    this->colour1[led_no] = colour1;
+    this->colour2[led_no] = colour2;
+    this->blink_time_1[led_no] = blink_time_1;
+	this->blink_time_2[led_no] = blink_time_2;
+    this->blink_time_1_2[led_no] = blink_time_1_2;
+    this->blink_time_2_1[led_no] = blink_time_2_1;
+	this->blink_cycles[led_no] = -1;
+    this->blink_enable[led_no] = 2;
+    this->state[led_no] = start_state;
+    if (start_state == 0) {
+        this->blink_change_time[led_no] = millis() + blink_time_1;
+    } else if (start_state == 1) {
+        this->blink_change_time[led_no] = millis() + blink_time_1_2;
+    } else if (start_state == 2) {
+        this->blink_change_time[led_no] = millis() + blink_time_2;
+    } else if (start_state == 3) {
+        this->blink_change_time[led_no] = millis() + blink_time_2_1;
+    }
+    this->pulse_end_state[led_no] = 0;
+}
+
+void FLedPWM::fade(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time_1, uint32_t blink_time_2, uint32_t blink_time_1_2, uint32_t blink_time_2_1, byte start_state, byte pulse_cycles, byte end_state) {
+    this->colour1[led_no] = colour1;
+    this->colour2[led_no] = colour2;
+    this->blink_time_1[led_no] = blink_time_1;
+	this->blink_time_2[led_no] = blink_time_2;
+    this->blink_time_1_2[led_no] = blink_time_1_2;
+    this->blink_time_2_1[led_no] = blink_time_2_1;
+	this->blink_cycles[led_no] = pulse_cycles;
+    this->blink_enable[led_no] = 2;
+    this->state[led_no] = start_state;
+    if (start_state == 0) {
+        this->blink_change_time[led_no] = millis() + blink_time_1;
+    } else if (start_state == 1) {
+        this->blink_change_time[led_no] = millis() + blink_time_1_2;
+    } else if (start_state == 2) {
+        this->blink_change_time[led_no] = millis() + blink_time_2;
+    } else if (start_state == 3) {
+        this->blink_change_time[led_no] = millis() + blink_time_2_1;
+    }
+    this->pulse_end_state[led_no] = end_state; // should be either 1 or 3. 0 or 2 means fading doesn't stop - unhandled
+}
+
+void FLedPWM::update() {
+    for (byte ii = 0; ii < led_length; ii++) {
+        if (blink_enable[ii] == 1) {
+            uint32_t thismillis = millis();
+            if (thismillis >= blink_change_time[ii]) {
+                if (state[ii] == 0) { // Need to switch to colour 1
+                    blink_change_time[ii] += blink_time_1[ii];
+                    leds_addr[ii] = colour1[ii];
+                    state[ii] = 1;
+                    // Serial.printf("Led %i changed to %lu\n", ii, colour1);
+                } else { // Need to switch to colour 2
+                    blink_change_time[ii] += blink_time_2[ii];
+                    leds_addr[ii] = colour2[ii];
+                    state[ii] = 0;
+                    // Serial.printf("Led %i changed to %lu\n", ii, colour2);
+                }
+                if (blink_cycles[ii] > 0) {
+                    blink_cycles[ii] --;
+                }
+            }
+        } else if (blink_enable[ii] == 2) {
+            uint32_t thismillis = millis();
+            // Check if the pulse state needs to change
+            if (thismillis >= blink_change_time[ii]) {
+                if (state[ii] == 0) { // Need to fade from 2 to 1
+                    blink_change_time[ii] += blink_time_2_1[ii];
+                    // leds_addr[ii] = colour1[ii];
+                    state[ii] = 1;
+                } else if (state[ii] == 1) { // Need to hold colour 1
+                    blink_change_time[ii] += blink_time_1[ii];
+                    leds_addr[ii] = colour1[ii];
+                    state[ii] = 2;
+                } else if (state[ii] == 2) { // Need to fade from 1 to 2
+                    blink_change_time[ii] += blink_time_1_2[ii];
+                    // leds_addr[ii] = colour2[ii];
+                    state[ii] = 3;
+                } else { // Need to hold colour 2
+                    blink_change_time[ii] += blink_time_2[ii];
+                    leds_addr[ii] = colour2[ii];
+                    state[ii] = 0;
+                }
+                if (state[ii] == 0 && blink_cycles[ii] > 0) {
+                    blink_cycles[ii] --;
+                }
+                Serial.printf("Led %i now state %i\n", ii, state[ii]);
+            }
+            // Update colours on fade up/down
+            if (state[ii] == 1) {
+                float cmix2 = (float(blink_change_time[ii]-thismillis)/float(blink_time_1_2[ii]));
+                float cmix1 = (float(thismillis-(blink_change_time[ii]-blink_time_1_2[ii]))/float(blink_time_1_2[ii]));
+                uint8_t this_r = colour1[ii].r * cmix1 + colour2[ii].r * cmix2;
+                uint8_t this_g = colour1[ii].g * cmix1 + colour2[ii].g * cmix2;
+                uint8_t this_b = colour1[ii].b * cmix1 + colour2[ii].b * cmix2;
+                leds_addr[ii].setRGB(this_r, this_g, this_b);
+                // Serial.printf("Led %i is %f %% the way through. Colour = %f + %f\n", ii, cmix1, cmix1, cmix2);
+                // Serial.printf("Led %i = %i, %i, %i\n", ii, this_r, this_g, this_b);
+            } else if (state[ii] == 3) {
+                float cmix1 = (float(blink_change_time[ii]-thismillis)/blink_time_2_1[ii]);
+                float cmix2 = (float(thismillis-(blink_change_time[ii]-blink_time_2_1[ii]))/blink_time_2_1[ii]);
+                uint8_t this_r = colour1[ii].r * cmix1 + colour2[ii].r * cmix2;
+                uint8_t this_g = colour1[ii].g * cmix1 + colour2[ii].g * cmix2;
+                uint8_t this_b = colour1[ii].b * cmix1 + colour2[ii].b * cmix2;
+                leds_addr[ii].setRGB(this_r, this_g, this_b);
+                // Serial.printf("Led %i is %f %% the way through. Colour = %f + %f\n", ii, cmix2, cmix1, cmix2);
+                // Serial.printf("Led %i = %i, %i, %i\n", ii, this_r, this_g, this_b);
+            }
+        }
+        if (blink_enable[ii] == 1) {
+            if (blink_cycles[ii] == 0) {
+                blink_enable[ii] = 0;
+            }
+        } else if (blink_enable[ii] == 2) {
+            if (pulse_end_state[ii] == state[ii]) {
+                if (blink_cycles[ii] == 0) {
+                    blink_enable[ii] = 0;
+                }
+            }
+        }
+    }
 }
 
 Switch::Switch() {

@@ -2,13 +2,14 @@
 #define KTOME_COMMON_H
 
 #include <Arduino.h>
+#include <FastLED.h>
 
-// class Led_category {
-// 	public:
-// 		static const byte module_red		=	1;
-// 		static const byte module_grn		=	2;
-// 		static const byte other				=	0;
-// };
+// FastLED consts
+#define LED_TYPE    WS2812
+#define COLOR_ORDER GRB
+#define BRIGHTNESS  32
+#define DATA_PIN    13 //2
+#define LED_LENGTH  10
 
 class Led {
 	protected:
@@ -74,6 +75,52 @@ class LedPWM : public LedBlinkable {
 		void setPulse(uint32_t duty_high, uint32_t duty_low, uint32_t low_time, uint32_t rising_time, uint32_t high_time, uint32_t falling_time);
 		void setPulse(uint32_t duty_high, uint32_t duty_low, uint32_t low_time, uint32_t rising_time, uint32_t high_time, uint32_t falling_time, bool start_high);
         void setPulse(uint32_t duty_high, uint32_t duty_low, uint32_t low_time, uint32_t rising_time, uint32_t high_time, uint32_t falling_time, bool start_high, int8_t blink_cycles);
+		void update();
+};
+
+class FLed {
+    protected:
+		byte pin;
+        byte led_length = LED_LENGTH;
+		byte blink_enable[LED_LENGTH]; // 0 = static, 1 = blinking, 2 = pulsing
+	public:
+        // CRGB leds[10];
+        CRGB *leds_addr;
+		FLed();
+		void init(CRGB *leds, byte led_length);
+		void write(byte led_no, CRGB colour);
+		void writergb(byte led_no, byte clr_r, byte clr_g, byte clr_b);
+        CRGB read(byte led_no);
+        void update();
+};
+
+class FLedBlinkable : public FLed {
+    protected:
+        byte state[LED_LENGTH]; // 0 = c2, 1 = c1 | 0 = c2, 1 = rising, 2 = c1, 3 = falling
+        CRGB colour1[LED_LENGTH];
+        CRGB colour2[LED_LENGTH];
+        uint32_t blink_change_time[LED_LENGTH];
+		uint32_t blink_time_1[LED_LENGTH];
+		uint32_t blink_time_2[LED_LENGTH];
+		int8_t blink_cycles[LED_LENGTH];
+	public:
+        FLedBlinkable();
+		void blink(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time);
+		void blink(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time, int8_t blink_cycles);
+		void blink(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time_1, uint32_t blink_time_2, int8_t blink_cycles);
+		void update();
+};
+
+class FLedPWM : public FLedBlinkable {
+	protected:
+		uint32_t blink_time_1_2[LED_LENGTH];
+		uint32_t blink_time_2_1[LED_LENGTH];
+        byte pulse_end_state[LED_LENGTH];
+	public:
+		FLedPWM();
+		void fade(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time_1, uint32_t blink_time_2, uint32_t blink_time_1_2, uint32_t blink_time_2_1);
+		void fade(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time_1, uint32_t blink_time_2, uint32_t blink_time_1_2, uint32_t blink_time_2_1, byte start_state);
+        void fade(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time_1, uint32_t blink_time_2, uint32_t blink_time_1_2, uint32_t blink_time_2_1, byte start_state, byte pulse_cycles, byte end_state);
 		void update();
 };
 

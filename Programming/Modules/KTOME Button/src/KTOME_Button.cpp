@@ -6,9 +6,6 @@ KTOME_Button::KTOME_Button() {
 }
 
 void KTOME_Button::start() {
-  // for (byte ii = 0; ii < 3; ii++) {
-  //   leds_button[ii].init(pin_array[ii],5000,ii);
-  // }
   leds_button[0].init(pin_array[0],5000,0);
   leds_button[1].init(pin_array[1],5000,1);
   leds_button[2].init(pin_array[2],5000,2);

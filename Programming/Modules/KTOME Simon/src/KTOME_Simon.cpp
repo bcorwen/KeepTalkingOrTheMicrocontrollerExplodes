@@ -219,7 +219,7 @@ byte KTOME_Simon::update()
     {
         if (button_timing <= this_time && user_interrupt)
         { // User has interruped demo but has now taken too long to input next button press...
-            Serial.println("Switching back to demo...");
+            // Serial.println("Switching back to demo...");
             user_interrupt = false;
             step = 0; // User needs to restart at the beginning of the sequence
             disp_step = 0;
@@ -228,7 +228,7 @@ byte KTOME_Simon::update()
 
         if (light_timing <= this_time && !user_interrupt)
         { // We are due the next light in the demo and the user isn't inputting anything...
-            Serial.println("Next light triggered...");
+            // Serial.println("Next light triggered...");
             // leds[sequence_lights[disp_step]].blink(true, led_on_time, 1);
             leds[sequence_lights[disp_step]].setPulse(255, 0, 1, 100, 300, 100, false, 1);
             return_result = (1 << sequence_lights[disp_step]);
@@ -237,7 +237,7 @@ byte KTOME_Simon::update()
             disp_step++;
             if (disp_step > stage)
             { // Sequence ended, restart
-                Serial.println("which was the last in the seq! Back to first light...");
+                // Serial.println("which was the last in the seq! Back to first light...");
                 disp_step = 0;
                 light_timing = this_time + reset_time;
             }

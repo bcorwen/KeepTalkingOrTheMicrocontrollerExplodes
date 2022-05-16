@@ -135,7 +135,7 @@ String BLE_state = "";
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
                     //4fafc201-1fb5-459e-8fcc-c5c9c331914b
 #define CHARACTERISTIC_UUID_RX "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define CHARACTERISTIC_UUID_TX "beb5483f-36e1-4688-b7f5-ea07361b26a8"
+#define CHARACTERISTIC_UUID_TX "beb5483f-36e1-4688-b7f5-ea07361b26a9"
                               //beb5483f-36e1-4688-b7f5-ea07361b26a8
 
 BLEServer *pServer = NULL;
@@ -252,21 +252,21 @@ void setup()
 
     // Start serial connection
     Serial.begin(115200);
-    while (!Serial);
+    // while (!Serial);
     Serial.println("== KTOME: Timer ==");
 
     // Start CAN bus
     CAN_ID = CONFIG_CAN_MODULE_TYPE | CONFIG_CAN_MODULE_NUM;
     ktomeCAN.setId(CAN_ID);
-    ktomeCAN.start();
+    ktomeCAN.start(14, 13);
     // start the CAN bus at 500 kbps
-    if (!ktomeCAN.start())
-    {
-        Serial.println("Starting CAN failed!");
-        while (1);
-    } else {
-        Serial.println("CAN started!");
-    }
+    // if (!ktomeCAN.start())
+    // {
+    //     Serial.println("Starting CAN failed!");
+    //     while (1);
+    // } else {
+    //     Serial.println("CAN started!");
+    // }
     Serial.print("My ID is:   0b");
     ktomeCAN.padZeros(CAN_ID);
     Serial.println(CAN_ID, BIN);
@@ -287,7 +287,7 @@ void setup()
     BLEDevice::init("KTOME");
     pServer = BLEDevice::createServer();
     pService = pServer->createService(SERVICE_UUID);
-    pTxCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_TX, /* BLECharacteristic::PROPERTY_READ | */ BLECharacteristic::PROPERTY_NOTIFY);
+    pTxCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_TX, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
     pTxCharacteristic->addDescriptor(new BLE2902());
     pRxCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_RX, BLECharacteristic::PROPERTY_WRITE);
     pRxCharacteristic->addDescriptor(new BLE2902());
@@ -391,7 +391,7 @@ void initialisation()
     module_count = 0;
     module_count_solvable = 0;
 
-    Serial.println("about to CAN message...");
+    Serial.println("CAN poll sending, time to wait and see...");
 
     // Why are we cycling through all modules and sending a message for each? Just send one message to all!
     CAN_message[0] = 'P';
@@ -400,31 +400,34 @@ void initialisation()
     ktomeCAN.send((can_ids.All_modules), CAN_message, 1);
     digitalWrite(PIN_LED_CAN, LOW);
 
-    Serial.println("CAN poll out, time to wait and see...");
-
-    delay(1000);
+    // delay(1000);
 
     bool message_waiting = false;
-    do
-    { // There are outstanding messages
-        CANInbox();
-        if (module_detected)
-        {
-            module_array[module_count] = (ktomeCAN.can_msg_id & (can_ids.All_modules | can_ids.MUID_15));
-            Serial.print("Module count: ");
-            Serial.println(module_count + 1);
-            Serial.print("Module id: 0b");
-            ktomeCAN.padZeros(module_array[module_count]);
-            Serial.println(module_array[module_count], BIN);
-            if ((module_array[module_count] & (can_ids.All_standards)) > 0)
+    long wait_time = millis() + 1000;
+    while(wait_time > millis()) {
+        // Serial.println("One second while we wait for messages...");
+        do
+        { // There are outstanding messages
+            CANInbox();
+            if (module_detected)
             {
-                module_count_solvable++;
+                module_array[module_count] = (ktomeCAN.can_msg_id & (can_ids.All_modules | can_ids.MUID_15));
+                Serial.print("Module count: ");
+                Serial.println(module_count + 1);
+                Serial.print("Module id: 0b");
+                ktomeCAN.padZeros(module_array[module_count]);
+                Serial.println(module_array[module_count], BIN);
+                if ((module_array[module_count] & (can_ids.All_standards)) > 0)
+                {
+                    module_count_solvable++;
+                }
+                module_count++;
+                module_detected = false;
             }
-            module_count++;
-            module_detected = false;
-        }
-        message_waiting = ktomeCAN.isMessageWaiting();
-    } while (message_waiting);
+            message_waiting = ktomeCAN.isMessageWaiting();
+            // delay(100);
+        } while (message_waiting);
+    }
 
     Serial.println("All modules polled. Connected modules: ");
     for (byte ii = 0; ii < module_count; ii++)
