@@ -1,6 +1,24 @@
 #include <Arduino.h>
 #include <KTOME_Simon.h>
 
+// #define DEBUG
+
+#ifdef DEBUG
+    #define DEBUG_SERIAL(x)     Serial.begin(x)
+    #define DEBUG_PRINT(x)      Serial.print(x)
+    #define DEBUG_PRINTBIN(x)   Serial.print(x, BIN)
+    #define DEBUG_PRINTLN(x)    Serial.println(x)
+    #define DEBUG_PRINTLNBIN(x) Serial.println(x, BIN)
+    #define DEBUG_PADZERO(x)    ktomeCAN.padZeros(x)
+#else
+    #define DEBUG_SERIAL(x)
+    #define DEBUG_PRINT(x)
+    #define DEBUG_PRINTBIN(x)
+    #define DEBUG_PRINTLN(x)
+    #define DEBUG_PRINTLNBIN(x)
+    #define DEBUG_PADZERO(x)
+#endif
+
 KTOME_Simon::KTOME_Simon()
 {
 }
@@ -25,25 +43,33 @@ void KTOME_Simon::reset()
     strike_count = 0;
 }
 
+void KTOME_Simon::powerOn()
+{
+    leds[0].setPulse(255, 0, 1, 100, 300, 100, false, 1);
+    leds[1].setPulse(255, 0, 100, 100, 300, 100, false, 1);
+    leds[2].setPulse(255, 0, 150, 100, 300, 100, false, 1);
+    leds[3].setPulse(255, 0, 250, 100, 300, 100, false, 1);
+}
+
 void KTOME_Simon::generate()
 {
 
     stages = random(2) + 3;
-    Serial.print(F("Number of stages: "));
-    Serial.println(stages);
+    DEBUG_PRINT(F("Number of stages: "));
+    DEBUG_PRINTLN(stages);
 
-    Serial.print("Sequence: ");
+    DEBUG_PRINT("Sequence: ");
     for (byte ii = 0; ii < stages; ii++)
     {
         sequence_lights[ii] = random(4);
-        Serial.print(light_colours[sequence_lights[ii]]);
+        DEBUG_PRINT(light_colours[sequence_lights[ii]]);
         if (ii < (stages - 1))
         {
-            Serial.print(" > ");
+            DEBUG_PRINT(" > ");
         }
         else
         {
-            Serial.println();
+            DEBUG_PRINTLN();
         }
     }
 }
@@ -71,25 +97,25 @@ void KTOME_Simon::findSolution()
     {
         vowel_row = 1;
     }
-    Serial.print("Current Simon solution (for vowel=");
-    Serial.print(serial_vowel);
-    Serial.print(" & strikes=");
-    Serial.print(strike_count);
-    Serial.print("): ");
+    DEBUG_PRINT("Current Simon solution (for vowel=");
+    DEBUG_PRINT(serial_vowel);
+    DEBUG_PRINT(" & strikes=");
+    DEBUG_PRINT(strike_count);
+    DEBUG_PRINT("): ");
     for (byte ii = 0; ii < 4; ii++)
     {
         button_to_light[ii] = translation[strike_count][vowel_row][ii];
     }
     for (byte ii = 0; ii < stages; ii++)
     {
-        Serial.print(light_colours[button_to_light[sequence_lights[ii]]]);
+        DEBUG_PRINT(light_colours[button_to_light[sequence_lights[ii]]]);
         if (ii < (stages - 1))
         {
-            Serial.print(" > ");
+            DEBUG_PRINT(" > ");
         }
         else
         {
-            Serial.println();
+            DEBUG_PRINTLN();
         }
     }
 }
@@ -125,8 +151,8 @@ bool KTOME_Simon::hasButtonBeenPushed(byte button_number)
     {
         if (switches[button_number].isPressed())
         {
-            Serial.print(button_number);
-            Serial.println(" button pressed!");
+            DEBUG_PRINT(button_number);
+            DEBUG_PRINTLN(" button pressed!");
             user_interrupt = true;
             lightsOut();
             // leds[button_number].blink(true, led_on_time, 1);
@@ -135,8 +161,8 @@ bool KTOME_Simon::hasButtonBeenPushed(byte button_number)
         }
         else
         {
-            // Serial.print(button_number);
-            // Serial.println(" button released!");
+            // DEBUG_PRINT(button_number);
+            // DEBUG_PRINTLN(" button released!");
             return false;
         }
     }
@@ -151,10 +177,10 @@ byte KTOME_Simon::logicCheck(byte button_number)
 
     uint32_t this_time = millis();
 
-    Serial.print("Stage: ");
-    Serial.print(stage);
-    Serial.print(" | Step: ");
-    Serial.println(step);
+    DEBUG_PRINT("Stage: ");
+    DEBUG_PRINT(stage);
+    DEBUG_PRINT(" | Step: ");
+    DEBUG_PRINTLN(step);
 
     if (button_to_light[sequence_lights[step]] == button_number)
     {                                           // Correct button pressed
@@ -166,11 +192,11 @@ byte KTOME_Simon::logicCheck(byte button_number)
             stage = step;
             light_timing = this_time + advance_time;
             button_timing = this_time + advance_time;
-            Serial.println("Correct button, stage complete!");
+            DEBUG_PRINTLN("Correct button, stage complete!");
         }
         else
         {
-            Serial.println("Correct button, next step...");
+            DEBUG_PRINTLN("Correct button, next step...");
         }
         return 0; // Correct input
     }
@@ -212,14 +238,14 @@ byte KTOME_Simon::update()
 
     uint32_t this_time = millis();
 
-    // Serial.print("user_interrupt: ");
-    // Serial.println(user_interrupt);
+    // DEBUG_PRINT("user_interrupt: ");
+    // DEBUG_PRINTLN(user_interrupt);
 
     if (game_running)
     {
         if (button_timing <= this_time && user_interrupt)
         { // User has interruped demo but has now taken too long to input next button press...
-            // Serial.println("Switching back to demo...");
+            // DEBUG_PRINTLN("Switching back to demo...");
             user_interrupt = false;
             step = 0; // User needs to restart at the beginning of the sequence
             disp_step = 0;
@@ -228,7 +254,7 @@ byte KTOME_Simon::update()
 
         if (light_timing <= this_time && !user_interrupt)
         { // We are due the next light in the demo and the user isn't inputting anything...
-            // Serial.println("Next light triggered...");
+            // DEBUG_PRINTLN("Next light triggered...");
             // leds[sequence_lights[disp_step]].blink(true, led_on_time, 1);
             leds[sequence_lights[disp_step]].setPulse(255, 0, 1, 100, 300, 100, false, 1);
             return_result = (1 << sequence_lights[disp_step]);
@@ -237,7 +263,7 @@ byte KTOME_Simon::update()
             disp_step++;
             if (disp_step > stage)
             { // Sequence ended, restart
-                // Serial.println("which was the last in the seq! Back to first light...");
+                // DEBUG_PRINTLN("which was the last in the seq! Back to first light...");
                 disp_step = 0;
                 light_timing = this_time + reset_time;
             }

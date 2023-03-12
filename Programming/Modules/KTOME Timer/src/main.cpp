@@ -152,13 +152,13 @@ class MyServerCallbacks : public BLEServerCallbacks
     void onConnect(BLEServer *pServer)
     {
         deviceConnected = true;
-        delay(100);
+        // delay(100);
     };
     void onDisconnect(BLEServer *pServer)
     {
         deviceConnected = false;
-        delay(100);
-        pServer->startAdvertising();
+        // delay(100);
+        // pServer->startAdvertising();
         //      gamemode = 0;
     }
 };

@@ -2,15 +2,33 @@
 //
 //  Keep Talking Or the Microcontroller Explodes!
 //
-//    - bcorwen, 13/04/21
+//    - bcorwen, 01/06/22
 //======================================================================
 //
 //  Module: The Button module (Slave, Standard, Vanilla)
-//  version 0.6.1
+//  version 0.7.0
 //
-//  Version goals: Object-oriented implementation of Button logic
+//  Version goals: Support for FastLED library, working on PCB
 //
 //======================================================================
+
+#define DEBUG 1 // Comment this line to disable Serial messages
+
+#ifdef DEBUG
+    #define DEBUG_SERIAL(x)     Serial.begin(x)
+    #define DEBUG_PRINT(x)      Serial.print(x)
+    #define DEBUG_PRINTBIN(x)   Serial.print(x, BIN)
+    #define DEBUG_PRINTLN(x)    Serial.println(x)
+    #define DEBUG_PRINTLNBIN(x) Serial.println(x, BIN)
+    #define DEBUG_PADZERO(x)    ktomeCAN.padZeros(x)
+#else
+    #define DEBUG_SERIAL(x)
+    #define DEBUG_PRINT(x)
+    #define DEBUG_PRINTBIN(x)
+    #define DEBUG_PRINTLN(x)
+    #define DEBUG_PRINTLNBIN(x)
+    #define DEBUG_PADZERO(x)
+#endif
 
 //**********************************************************************
 // LIBRARIES
@@ -31,9 +49,10 @@
 // GLOBAL VARIABLES
 //**********************************************************************
 
-#define PIN_LED_CAN   GPIO_NUM_12
-#define MOD_STATUS_R  GPIO_NUM_32
-#define MOD_STATUS_G  GPIO_NUM_33
+// #define PIN_LED_CAN   GPIO_NUM_12
+// #define MOD_STATUS_R  GPIO_NUM_32
+// #define MOD_STATUS_G  GPIO_NUM_33
+#define PIN_LED_STATUS   GPIO_NUM_2
 
 // Game
 byte gamemode = 0;
@@ -70,10 +89,14 @@ String timer_digits;
 int CAN_ID;
 
 // Led* leds = new Led[11];
-LedBlinkable leds[3]; // Move back to pointer array?!
-byte led_pin_array[] = {PIN_LED_CAN, MOD_STATUS_R, MOD_STATUS_G};
+// LedBlinkable leds[3]; // Move back to pointer array?!
+// byte led_pin_array[] = {PIN_LED_CAN, MOD_STATUS_R, MOD_STATUS_G};
+byte led_length = 10;
+CRGB leds[2];
+FLedPWM fled;
 
 // Fuction list
+void powerOn();
 void carPark();
 void initialisation();
 void gameSetup();
@@ -89,52 +112,63 @@ void CANInbox();
 // FUNCTIONS: Main
 //**********************************************************************
 void setup() {
-  // Start serial connection
-  Serial.begin(115200);
-  while (!Serial);
-  Serial.println("== KTOME: Module (Button) ==");
+    // Start serial connection
+    DEBUG_SERIAL(115200);
+    while (!Serial);
+    DEBUG_PRINTLN("== KTOME: Module (Button) ==");
 
-  // Start CAN bus
-  CAN_ID = CONFIG_CAN_MODULE_TYPE | CONFIG_CAN_MODULE_NUM;
-  ktomeCAN.setId(CAN_ID);
-  ktomeCAN.start();
-  // start the CAN bus at 500 kbps
-  if (!ktomeCAN.start()) {
-    Serial.println("Starting CAN failed!");
-    while (1);
-  }
-  Serial.print("My ID is:   0b");
-  ktomeCAN.padZeros(CAN_ID);
-  Serial.println(CAN_ID, BIN);
+    // Start CAN bus
+    CAN_ID = CONFIG_CAN_MODULE_TYPE | CONFIG_CAN_MODULE_NUM;
+    ktomeCAN.setId(CAN_ID);
+    ktomeCAN.start(14, 13);
+    // start the CAN bus at 500 kbps
+    // if (!ktomeCAN.start()) {
+    //     DEBUG_PRINTLN("Starting CAN failed!");
+    //     while (1);
+    // }
+    DEBUG_PRINT("My ID is:   0b");
+    DEBUG_PADZERO(CAN_ID);
+    DEBUG_PRINTLNBIN(CAN_ID);
 
-  // Randomiser
-  esp_random();
+    // Randomiser
+    esp_random();
 
-  // Setup objects
-  button.start();
+    DEBUG_PRINTLN("Init'ing fled and FastLED...");
+    fled.init(&leds[0], led_length);
+    FastLED.addLeds<WS2812B, PIN_LED_STATUS, GRB>(leds, led_length).setCorrection( TypicalLEDStrip );
+    FastLED.setBrightness( 16 );
 
-  for (byte ii = 0; ii < 3; ii++) {
-    leds[ii].init(led_pin_array[ii]);
-  }
+    // Setup objects
+    DEBUG_PRINTLN("Starting button...");
+    button.start(&fled);
+
+//   for (byte ii = 0; ii < 3; ii++) {
+//     leds[ii].init(led_pin_array[ii]);
+//   }
+    // DEBUG_PRINTLN("Init'ing fled and FastLED...");
+    // fled.init(&leds[0], led_length);
+    // FastLED.addLeds<WS2812B, PIN_LED_STATUS, GRB>(leds, led_length).setCorrection( TypicalLEDStrip );
+    // FastLED.setBrightness( 16 );
 }
 
 void loop() {
     switch (gamemode) {
         case 0:
+            powerOn();
             carPark();
             break;
         case 1: // Module poll
-            Serial.println(F("Module search..."));
+            DEBUG_PRINTLN(F("Module search..."));
             gameReset();
             initialisation();
             carPark();
             break;
         case 2: // Game in set-up
-            Serial.println(F("Game set-up..."));
+            DEBUG_PRINTLN(F("Game set-up..."));
             carPark();
             break;
         case 3: // Game running
-            Serial.println(F("Game starting!"));
+            DEBUG_PRINTLN(F("Game starting!"));
             game_running = true;
             gameRunning();
             break;
@@ -152,15 +186,37 @@ void loop() {
 
 void carPark() {
   holding = true;
-  Serial.println("Script parked - waiting for direction...");
+  DEBUG_PRINTLN("Script parked - waiting for direction...");
   while (holding) {
     do {
       CANInbox();
     } while (ktomeCAN.isMessageWaiting());
+
+    // Start test
+    if (button.inputCheck()){
+        fled.fade(1, CRGB::Blue, 0x000055, 500, 166, 333, 333);
+        Serial.print("Button press detected!");
+    }
+    // End test
+
     button.update();
-    leds[1].update();
+    // leds[1].update();
+    fled.update();
+    FastLED.show();
     delay (1);
   }
+}
+
+//**********************************************************************
+// FUNCTIONS: Game powered : gamemode = 0
+//**********************************************************************
+
+// Module has been plugged in and finished setup()
+
+void powerOn()
+{
+    fled.blink(0, CRGB::Green, CRGB::Black, 500, 2);
+    button.powerOn();
 }
 
 //**********************************************************************
@@ -170,12 +226,12 @@ void carPark() {
 // Comm with modules to determine what's connected
 
 void initialisation() {
-  char CAN_message[2];
-  CAN_message[0] = 'p';
-  CAN_message[1] = '\0';
-  leds[0].write(true);
-  ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 1);
-  leds[0].write(false);
+    char CAN_message[2];
+    CAN_message[0] = 'p';
+    CAN_message[1] = '\0';
+//   leds[0].write(true);
+    ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 1);
+//   leds[0].write(false);
 }
 
 //**********************************************************************
@@ -185,28 +241,30 @@ void initialisation() {
 // Comm with phone to set up a game
 
 void gameSetup() {
-  game_ready = false;
-  button.reset();
-  button.generate();
+    game_ready = false;
+    button.reset();
+    button.generate();
 
-  char CAN_message[2] = "i";
-  leds[0].write(true);
-  ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 5);
-  leds[0].write(false);
-  game_ready = true;
+    char CAN_message[2] = "i";
+    // leds[0].write(true);
+    ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 5);
+    // leds[0].write(false);
+    game_ready = true;
 }
 
 void manualCheck() {
-  String temp_msg;
-  temp_msg = button.getManual(); // NO MANUAL CHECK NEEDED!
+    String temp_msg;
+    temp_msg = button.getManual(); // NO MANUAL CHECK NEEDED!
 
-  char CAN_message[6];
-  temp_msg.toCharArray(CAN_message,6);
-  
-  leds[0].write(true);
-  ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 5);
-  leds[0].write(false);
-  leds[1].blink(true, 1000);
+    char CAN_message[6];
+    temp_msg.toCharArray(CAN_message,6);
+    
+    // leds[0].write(true);
+    ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 5);
+    // leds[0].write(false);
+    // leds[1].blink(true, 1000);
+    fled.blink(0, CRGB::Yellow, CRGB::Black, 500);
+
 }
 
 //**********************************************************************
@@ -214,85 +272,92 @@ void manualCheck() {
 //**********************************************************************
 
 void gameReset() {
-  module_defused = false;
-  game_aborted = false;
-  button.reset(); // Is this needed if reset is done before game gen?
-  // manual_blink = false;
-  strike_light_state = false;
-  for (byte ii = 0; ii < 3; ii++) {
-    leds[ii].write(false);
-  }
+    module_defused = false;
+    game_aborted = false;
+    button.reset(); // Is this needed if reset is done before game gen?
+    // manual_blink = false;
+    strike_light_state = false;
+    // for (byte ii = 0; ii < 3; ii++) {
+    //     leds[ii].write(false);
+    // }
+    fled.write(0, CRGB::Black);
 }
 
 void gameRunning() {
 
-  while (gamemode == 3) {
-    thismillis = millis();
-    // if (!module_defused) {
-      /* Input check */
-      inputCheck();
-      /* Defuse check */
-      module_defused = button.isDefused();
-      /* Output update */
-      button.update();
-      leds[1].update();
-    // }
+    while (gamemode == 3) {
+        thismillis = millis();
+        // if (!module_defused) {
+        /* Input check */
+        inputCheck();
+        /* Defuse check */
+        module_defused = button.isDefused();
+        /* Output update */
+        button.update();
+        // leds[1].update();
+        fled.update();
+        FastLED.show();
+        // }
 
-    // Check incoming messages
-    CANInbox();
-  }
+        // Check incoming messages
+        CANInbox();
+    }
 }
 
 void strikeTrigger() {
-  char CAN_message[] = "x";
-  leds[0].write(true);
-  ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 1);
-  leds[0].write(false);
+    char CAN_message[] = "x";
+    // leds[0].write(true);
+    ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 1);
+    // leds[0].write(false);
 
-  strike_light_timer = thismillis + strike_light_flash;
-  leds[1].blink(true, 500, 1);
-}
+    strike_light_timer = thismillis + strike_light_flash;
+    // leds[1].blink(true, 500, 1);
+    fled.blink(0, CRGB::Red, CRGB::Black, 500, 2);
+    }
 
-void defuseTrigger() {
-  char CAN_message[] = "d";
-  leds[0].write(true);
-  ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 1);
-  leds[0].write(false);
-  leds[1].write(false);
-  leds[2].write(true);
+    void defuseTrigger() {
+    char CAN_message[] = "d";
+    // leds[0].write(true);
+    ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 1);
+    // leds[0].write(false);
+    // leds[1].write(false);
+    // leds[2].write(true);
+    fled.write(0, CRGB::Green);
 
-  module_defused = true;
+    module_defused = true;
 }
 
 void explodeFX(bool target_state) {
     if (target_state) { // Only turn off, never flash this when exploding
-        leds[2].write(false);
-        leds[1].blink(true, 100, 1);
+        // leds[2].write(false);
+        // leds[1].blink(true, 100, 1);
+        fled.blink(0, CRGB::Red, CRGB::Black, 100, 2);
         button.explode();
     } else {
-        leds[1].write(false);
-        leds[2].write(false);
+        // leds[1].write(false);
+        // leds[2].write(false);
+        fled.write(0, CRGB::Black);
     }
 
 }
 
 void inputCheck() {
-  byte return_byte;
-  return_byte = button.inputCheck();
-  if (return_byte == 1) { // Timer to be requested
-    // Serial.print("Send time: ");
-    // Serial.println(millis());
-    char CAN_message[] = "t";
-    leds[0].write(true);
-    ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 1);
-    leds[0].write(false);
-  } else if (return_byte == 2) { // Timer not needed, success
-    defuseTrigger();
-  } else if (return_byte == 3) { // Strike
-    strikeTrigger();
-  } else { // Button not released
+    byte return_byte;
+    return_byte = button.inputCheck();
+    if (return_byte == 1) { // Timer to be requested
+        // DEBUG_PRINT("Send time: ");
+        // DEBUG_PRINTLN(millis());
+        char CAN_message[] = "t";
+        // leds[0].write(true);
+        ktomeCAN.send(can_ids.Master | CAN_ID, CAN_message, 1);
+        // leds[0].write(false);
+    } else if (return_byte == 2) { // Timer not needed, success
+        defuseTrigger();
+    } else if (return_byte == 3) { // Strike
+        strikeTrigger();
+    } else { // Button not released
 
-  }
+    }
 }
 
 //**********************************************************************
@@ -300,78 +365,79 @@ void inputCheck() {
 //**********************************************************************
 
 void CANInbox() {
-  if (ktomeCAN.isMessageWaiting()) { // Outstanding messages to handle
-    ktomeCAN.receive();
-    if (ktomeCAN.can_msg[0] == 'P') { // Init call
-      Serial.println("This module is present!");
-      gamemode = 1;
-      holding = false;
+    if (ktomeCAN.isMessageWaiting()) { // Outstanding messages to handle
+        ktomeCAN.receive();
+        if (ktomeCAN.can_msg[0] == 'P') { // Init call
+            DEBUG_PRINTLN("This module is present!");
+            gamemode = 1;
+            holding = false;
 
-    } else if (ktomeCAN.can_msg[0] == 'I') { // Setup a game scenario
-      Serial.println("This module was asked to setup a scenario!");
-      gamemode = 2;
-      gameSetup();
-      holding = false;
+        } else if (ktomeCAN.can_msg[0] == 'I') { // Setup a game scenario
+            DEBUG_PRINTLN("This module was asked to setup a scenario!");
+            gamemode = 2;
+            gameSetup();
+            holding = false;
 
-    } else if (ktomeCAN.can_msg[0] == 'C' && gamemode == 2) { // Game manual setup call
-      Serial.println("This module was asked about it's manual setup!");
-      manualCheck();
-      //      holding = false;
+        } else if (ktomeCAN.can_msg[0] == 'C' && gamemode == 2) { // Game manual setup call
+            DEBUG_PRINTLN("This module was asked about it's manual setup!");
+            manualCheck();
+            //      holding = false;
 
-    } else if (ktomeCAN.can_msg[0] == 'M' && gamemode == 2) { // Game manual check call
-      Serial.println("This module was asked if manual setup was successful!");
-      leds[1].write(false);
+        } else if (ktomeCAN.can_msg[0] == 'M' && gamemode == 2) { // Game manual check call
+            DEBUG_PRINTLN("This module was asked if manual setup was successful!");
+            //   leds[1].write(false);
+            fled.write(0, CRGB::Black);
 
-    } else if (ktomeCAN.can_msg[0] == 'A' && gamemode == 2) { // Game start
-      Serial.println("This module was asked to start the game!");
-      //
-      gamemode = 3;
-      holding = false;
-    } else if (ktomeCAN.can_msg[0] == 'Z') { // Game stop
-      Serial.println("This module was asked to stop the game!");
-      gamemode = 4;
-      if (ktomeCAN.can_msg[1] == '1') { // Explosion
-        explosion_fx = true;
-        strike_light_timer = thismillis + 100;
-      } else if (ktomeCAN.can_msg[1] == '0') { // Defused
-        explosion_fx = false;
-      } else { // Aborted
-        explosion_fx = false;
-        game_aborted = true;
-      }
-      holding = false;
-    } else if (ktomeCAN.can_msg[0] == 'W') { // Edgework setup
-      battery_number = ktomeCAN.can_msg[3] - '0';
-      if (ktomeCAN.can_msg[4] == '1'){
-        ind_car = true;
-      } else { ind_car = false;}
-      if (ktomeCAN.can_msg[5] == '1'){
-        ind_frk = true;
-      } else { ind_frk = false;}
-      button.findSolution(ind_frk, ind_car, battery_number);
-    } else if (ktomeCAN.can_msg[0] == 'S') { // Serial number
+        } else if (ktomeCAN.can_msg[0] == 'A' && gamemode == 2) { // Game start
+            DEBUG_PRINTLN("This module was asked to start the game!");
+            //
+            gamemode = 3;
+            holding = false;
+        } else if (ktomeCAN.can_msg[0] == 'Z') { // Game stop
+            DEBUG_PRINTLN("This module was asked to stop the game!");
+            gamemode = 4;
+            if (ktomeCAN.can_msg[1] == '1') { // Explosion
+                explosion_fx = true;
+                strike_light_timer = thismillis + 100;
+            } else if (ktomeCAN.can_msg[1] == '0') { // Defused
+                explosion_fx = false;
+            } else { // Aborted
+                explosion_fx = false;
+                game_aborted = true;
+            }
+        holding = false;
+        } else if (ktomeCAN.can_msg[0] == 'W') { // Edgework setup
+            battery_number = ktomeCAN.can_msg[3] - '0';
+            if (ktomeCAN.can_msg[4] == '1'){
+                ind_car = true;
+            } else { ind_car = false;}
+            if (ktomeCAN.can_msg[5] == '1'){
+                ind_frk = true;
+            } else { ind_frk = false;}
+            button.findSolution(ind_frk, ind_car, battery_number);
+        } else if (ktomeCAN.can_msg[0] == 'S') { // Serial number
 
-    } else if (ktomeCAN.can_msg[0] == 'X') { // Strike count
+        } else if (ktomeCAN.can_msg[0] == 'X') { // Strike count
 
-    } else if (ktomeCAN.can_msg[0] == 'H') { // Heartbeat on second tick
+        } else if (ktomeCAN.can_msg[0] == 'H') { // Heartbeat on second tick
 
-    } else if (ktomeCAN.can_msg[0] == 'T') { // Time on display
-      // Serial.print("Return time: ");
-      // Serial.println(millis());
-      // Serial.print("serial + millis delay: ");
-      // Serial.println(millis());
-      timer_digits = "";
-      for (byte ii = 1; ii < 5; ii++){
-        timer_digits = timer_digits + ktomeCAN.can_msg[ii];
-      }
-      byte return_byte = button.timerDigits(timer_digits);
-      if (return_byte == 1) {
-        defuseTrigger();
-      } else if (return_byte == 0) {
-        strikeTrigger();
-      }
+        } else if (ktomeCAN.can_msg[0] == 'T') { // Time on display
+            // DEBUG_PRINT("Return time: ");
+            // DEBUG_PRINTLN(millis());
+            // DEBUG_PRINT("serial + millis delay: ");
+            // DEBUG_PRINTLN(millis());
+            timer_digits = "";
+            for (byte ii = 1; ii < 5; ii++){
+                timer_digits = timer_digits + ktomeCAN.can_msg[ii];
+            }
+            byte return_byte = button.timerDigits(timer_digits);
+            if (return_byte == 1) {
+                defuseTrigger();
+            } else if (return_byte == 0) {
+                strikeTrigger();
+            }
+        }
     }
-  }
 }
 
 //**********************************************************************

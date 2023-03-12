@@ -8,8 +8,10 @@ KTOME_CAN::KTOME_CAN() {
 
 bool KTOME_CAN::start() {
 	bool success;
-	pin_rx = 27;
-	pin_tx = 26;
+	// pin_rx = 27;
+	// pin_tx = 26;
+    pin_rx = 14;
+	pin_tx = 13;
 	success = init();
 	return success;
 }
@@ -80,9 +82,9 @@ void KTOME_CAN::handleISR(int packet_size) {
 			}
 		}
 	}
-	Serial.print("Received packet with id 0b");
-	padZeros(CAN.packetId());
-	Serial.println(CAN.packetId(), BIN);
+	// Serial.print("Received packet with id 0b");
+	// padZeros(CAN.packetId());
+	// Serial.println(CAN.packetId(), BIN);
 }
 
 void KTOME_CAN::receive() {
@@ -96,8 +98,7 @@ void KTOME_CAN::receive() {
 			buffer_r++;
 		}
 		
-		Serial.print("Received ");
-		Serial.print("packet with id 0b");
+		Serial.print("Received packet with id 0b");
 		padZeros(can_msg_id);
 		Serial.print(can_msg_id, BIN);
 		Serial.print(" - \"");

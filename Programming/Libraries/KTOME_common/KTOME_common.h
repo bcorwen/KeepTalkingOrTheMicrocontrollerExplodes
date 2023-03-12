@@ -8,8 +8,11 @@
 #define LED_TYPE    WS2812
 #define COLOR_ORDER GRB
 #define BRIGHTNESS  32
-#define DATA_PIN    13 //2
-#define LED_LENGTH  10
+// #define DATA_PIN    13 // Breadboard testing
+// #define DATA_PIN    2 // PCB pin
+#ifndef FLED_LENGTH
+    #define FLED_LENGTH  10
+#endif
 
 class Led {
 	protected:
@@ -81,8 +84,8 @@ class LedPWM : public LedBlinkable {
 class FLed {
     protected:
 		byte pin;
-        byte led_length = LED_LENGTH;
-		byte blink_enable[LED_LENGTH]; // 0 = static, 1 = blinking, 2 = pulsing
+        byte led_length = FLED_LENGTH;
+		byte blink_enable[FLED_LENGTH]; // 0 = static, 1 = blinking, 2 = pulsing
 	public:
         // CRGB leds[10];
         CRGB *leds_addr;
@@ -96,13 +99,13 @@ class FLed {
 
 class FLedBlinkable : public FLed {
     protected:
-        byte state[LED_LENGTH]; // 0 = c2, 1 = c1 | 0 = c2, 1 = rising, 2 = c1, 3 = falling
-        CRGB colour1[LED_LENGTH];
-        CRGB colour2[LED_LENGTH];
-        uint32_t blink_change_time[LED_LENGTH];
-		uint32_t blink_time_1[LED_LENGTH];
-		uint32_t blink_time_2[LED_LENGTH];
-		int8_t blink_cycles[LED_LENGTH];
+        byte state[FLED_LENGTH]; // 0 = c2, 1 = c1 | 0 = c2, 1 = rising, 2 = c1, 3 = falling
+        CRGB colour1[FLED_LENGTH];
+        CRGB colour2[FLED_LENGTH];
+        uint32_t blink_change_time[FLED_LENGTH];
+		uint32_t blink_time_1[FLED_LENGTH];
+		uint32_t blink_time_2[FLED_LENGTH];
+		int8_t blink_cycles[FLED_LENGTH];
 	public:
         FLedBlinkable();
 		void blink(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time);
@@ -113,9 +116,9 @@ class FLedBlinkable : public FLed {
 
 class FLedPWM : public FLedBlinkable {
 	protected:
-		uint32_t blink_time_1_2[LED_LENGTH];
-		uint32_t blink_time_2_1[LED_LENGTH];
-        byte pulse_end_state[LED_LENGTH];
+		uint32_t blink_time_1_2[FLED_LENGTH];
+		uint32_t blink_time_2_1[FLED_LENGTH];
+        byte pulse_end_state[FLED_LENGTH];
 	public:
 		FLedPWM();
 		void fade(byte led_no, CRGB colour1, CRGB colour2, uint32_t blink_time_1, uint32_t blink_time_2, uint32_t blink_time_1_2, uint32_t blink_time_2_1);

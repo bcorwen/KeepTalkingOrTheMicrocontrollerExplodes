@@ -1,26 +1,52 @@
 #include <Arduino.h>
 #include <KTOME_Button.h>
+#include <KTOME_common.h>
+
+#define DEBUG 1
+
+#ifdef DEBUG
+    #define DEBUG_SERIAL(x)     Serial.begin(x)
+    #define DEBUG_PRINT(x)      Serial.print(x)
+    #define DEBUG_PRINTBIN(x)   Serial.print(x, BIN)
+    #define DEBUG_PRINTLN(x)    Serial.println(x)
+    #define DEBUG_PRINTLNBIN(x) Serial.println(x, BIN)
+    #define DEBUG_PADZERO(x)    ktomeCAN.padZeros(x)
+#else
+    #define DEBUG_SERIAL(x)
+    #define DEBUG_PRINT(x)
+    #define DEBUG_PRINTBIN(x)
+    #define DEBUG_PRINTLN(x)
+    #define DEBUG_PRINTLNBIN(x)
+    #define DEBUG_PADZERO(x)
+#endif
 
 KTOME_Button::KTOME_Button() {
 
 }
 
-void KTOME_Button::start() {
-  leds_button[0].init(pin_array[0],5000,0);
-  leds_button[1].init(pin_array[1],5000,1);
-  leds_button[2].init(pin_array[2],5000,2);
-  switches.init(pin_array[3]);
-  reset();
+void KTOME_Button::start(FLedPWM *leds) {
+//   leds_button[0].init(pin_array[0],5000,0);
+//   leds_button[1].init(pin_array[1],5000,1);
+//   leds_button[2].init(pin_array[2],5000,2);
+    leds_addr = leds;
+    // switches.init(pin_array[3]);
+    switches.init(pin_array[0]);
+    reset();
 }
 
 void KTOME_Button::reset() {
-  for (byte ii = 0; ii < 3; ii++) {
-    leds_button[ii].write(false);
-  }
-  module_defused = false;
-  wait_for_timer = false;
-  strip_on = false;
-  stripOn(false);
+    // for (byte ii = 0; ii < 3; ii++) {
+    //     leds_button[ii].write(false);
+    // }
+    leds_addr->write(1, CRGB::Black);
+    module_defused = false;
+    wait_for_timer = false;
+    strip_on = false;
+    stripOn(false);
+}
+
+void KTOME_Button::powerOn() {
+    leds_addr->fade(1, CRGB::Green, CRGB::Black, 500, 150, 150, 150, 0, 3, 0);
 }
 
 String KTOME_Button::getManual() {
@@ -34,10 +60,10 @@ void KTOME_Button::generate() {
   button_colour = random(4);
   button_label = random(4);
 
-  Serial.print(F("Button colour: "));
-  Serial.println(button_colours[button_colour]);
-  Serial.print(F("Button label: "));
-  Serial.println(button_labels[button_label]);
+  DEBUG_PRINT(F("Button colour: "));
+  DEBUG_PRINTLN(button_colours[button_colour]);
+  DEBUG_PRINT(F("Button label: "));
+  DEBUG_PRINTLN(button_labels[button_label]);
 
 }
 
@@ -59,32 +85,32 @@ void KTOME_Button::findSolution(bool ind_frk, bool ind_car, byte bat_num) {
     shortpushneeded = false;
   }
 
-  Serial.print("CAR: ");
-  Serial.print(ind_car);
-  Serial.print(" | FRK: ");
-  Serial.print(ind_frk);
-  Serial.print(" | Batts: ");
-  Serial.println(bat_num);
+  DEBUG_PRINT("CAR: ");
+  DEBUG_PRINT(ind_car);
+  DEBUG_PRINT(" | FRK: ");
+  DEBUG_PRINT(ind_frk);
+  DEBUG_PRINT(" | Batts: ");
+  DEBUG_PRINTLN(bat_num);
 
-  Serial.print("Button colour: ");
-  Serial.print(button_colours[button_colour]);
-  Serial.print(" | Button label: ");
-  Serial.println(button_labels[button_label]);
+  DEBUG_PRINT("Button colour: ");
+  DEBUG_PRINT(button_colours[button_colour]);
+  DEBUG_PRINT(" | Button label: ");
+  DEBUG_PRINTLN(button_labels[button_label]);
 
-  Serial.print(F("Short push?: "));
-  Serial.println(shortpushneeded);
+  DEBUG_PRINT(F("Short push?: "));
+  DEBUG_PRINTLN(shortpushneeded);
 
   strip_colour = random(4);
-  Serial.print(F("Strip colour: "));
-  Serial.println(button_colours[strip_colour]);
+  DEBUG_PRINT(F("Strip colour: "));
+  DEBUG_PRINTLN(button_colours[strip_colour]);
 
-  Serial.print(F("Release on "));
+  DEBUG_PRINT(F("Release on "));
   if (strip_colour == 0) {
-    Serial.println("4.");
+    DEBUG_PRINTLN("4.");
   } else if (strip_colour == 2) {
-    Serial.println("5.");
+    DEBUG_PRINTLN("5.");
   } else {
-    Serial.println("1.");
+    DEBUG_PRINTLN("1.");
   }
 }
 
@@ -104,10 +130,10 @@ bool KTOME_Button::hasButtonBeenReleased() {
     if (switches.isPressed()) {
       wait_for_timer = false;
       isthisapress = true;
-      Serial.println("Button pressed!");
+      DEBUG_PRINTLN("Button pressed!");
       return false;
     } else {
-      Serial.println("Button released!");
+      DEBUG_PRINTLN("Button released!");
       strip_on = false;
       stripOn(false);
       return true;
@@ -136,36 +162,38 @@ byte KTOME_Button::logicCheck(){
 }
 
 void KTOME_Button::stripOn(bool strip_power){
-  if (strip_power) {
-    byte this_colour;
-    if (shortpushneeded) {
-      // Use random colour from button_colours
-      this_colour = random(4);
+    if (strip_power) {
+        byte this_colour;
+        if (shortpushneeded) {
+            // Use random colour from button_colours
+            this_colour = random(4);
+        } else {
+            // Use strip_colour
+            this_colour = strip_colour;
+        }
+        DEBUG_PRINT("Strip colour: ");
+        DEBUG_PRINTLN(this_colour);
+        if (this_colour >= 1) { //Add red
+            DEBUG_PRINTLN("Adding red...");
+            // leds_button[0].setPulse(255,127,166,333,500,333);
+        }
+            if (this_colour == 1 || this_colour == 2) { //Add green
+            DEBUG_PRINTLN("Adding green...");
+            // leds_button[1].setPulse(153,76,166,333,500,333);
+        }      
+        if (this_colour == 0 || this_colour == 1) { //Add blue
+            DEBUG_PRINTLN("Adding blue...");
+            // leds_button[2].setPulse(153,76,166,333,500,333);
+        }
+        leds_addr->fade(1, button_colour_hi[this_colour], button_colour_lo[this_colour], 500, 166, 333, 333);
     } else {
-      // Use strip_colour
-      this_colour = strip_colour;
+        // Turn lights off
+        for (byte ii = 0; ii < 3; ii++){
+            // leds_button[ii].setPulse(0,0,166,333,500,333);
+            // leds_button[ii].write(false);
+            leds_addr->write(1, CRGB::Black);
+        }
     }
-    Serial.print("Strip colour: ");
-    Serial.println(this_colour);
-    if (this_colour >= 1) { //Add red
-      Serial.println("Adding red...");
-      leds_button[0].setPulse(255,127,166,333,500,333);
-    }
-    if (this_colour == 1 || this_colour == 2) { //Add green
-      Serial.println("Adding green...");
-      leds_button[1].setPulse(153,76,166,333,500,333);
-    }      
-    if (this_colour == 0 || this_colour == 1) { //Add blue
-      Serial.println("Adding blue...");
-      leds_button[2].setPulse(153,76,166,333,500,333);
-    }
-  } else {
-    // Turn lights off
-    for (byte ii = 0; ii < 3; ii++){
-      // leds_button[ii].setPulse(0,0,166,333,500,333);
-      leds_button[ii].write(false);
-    }
-  }
 }
 
 byte KTOME_Button::timerDigits(String timer_digits) {
@@ -202,10 +230,11 @@ bool KTOME_Button::isDefused() {
 
 void KTOME_Button::update() {
   for (byte ii = 0; ii < 3; ii++) {
-    leds_button[ii].update();
+    // leds_button[ii].update();
   }
 }
 
 void KTOME_Button::explode() {
-  leds_button[0].blink(true, 100, 1);
+//   leds_button[0].blink(true, 100, 1);
+    leds_addr->blink(1, CRGB::Red, CRGB::Black, 100, 2);
 }

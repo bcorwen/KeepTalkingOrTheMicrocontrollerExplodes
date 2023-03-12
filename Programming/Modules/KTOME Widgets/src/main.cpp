@@ -26,16 +26,49 @@
 #include <SoundFile.h>
 #include <XT_DAC_Audio.h>
 
+#define DEBUG 1
+#define TEST_SOUND 1
+#define EINK_DISPLAY 1
+
+#ifdef DEBUG
+    #define DEBUG_SERIAL(x)     Serial.begin(x)
+    #define DEBUG_PRINT(x)      Serial.print(x)
+    #define DEBUG_PRINTBIN(x)   Serial.print(x, BIN)
+    #define DEBUG_PRINTLN(x)    Serial.println(x)
+    #define DEBUG_PRINTLNBIN(x) Serial.println(x, BIN)
+    #define DEBUG_PADZERO(x)    ktomeCAN.padZeros(x)
+#else
+    #define DEBUG_SERIAL(x)
+    #define DEBUG_PRINT(x)
+    #define DEBUG_PRINTBIN(x)
+    #define DEBUG_PRINTLN(x)
+    #define DEBUG_PRINTLNBIN(x)
+    #define DEBUG_PADZERO(x)
+#endif
+
+#ifdef EINK_DISPLAY
+    #define EINK_DRAW(x)  draw_serial(x)
+    #define EINK_INIT(x)  display.init(x);
+    #define EINK_FONTS(x) u8g2Fonts.begin(x);
+#else
+    #define EINK_DRAW(x)
+    #define EINK_INIT(x)
+    #define EINK_FONTS(x)
+#endif
+
+// #include <WiFi.h>
+// #include <BluetoothSerial.h>
+
 //**********************************************************************
 // GLOBAL VARIABLES
 //**********************************************************************
-#define PIN_LED GPIO_NUM_12
+// #define PIN_LED GPIO_NUM_12
 #define PIN_EINK_DIN GPIO_NUM_23
 #define PIN_EINK_CLK GPIO_NUM_18
-#define PIN_EINK_CS GPIO_NUM_5
-#define PIN_EINK_DC GPIO_NUM_22
-#define PIN_EINK_RST GPIO_NUM_21
-#define PIN_EINK_BUSY GPIO_NUM_4
+#define PIN_EINK_CS GPIO_NUM_16     //GPIO_NUM_5
+#define PIN_EINK_DC GPIO_NUM_17     //GPIO_NUM_22
+#define PIN_EINK_RST GPIO_NUM_4     //GPIO_NUM_21
+#define PIN_EINK_BUSY GPIO_NUM_5    //GPIO_NUM_4
 
 // CAN
 //#define CAN_ID            CAN_WIDGETS
@@ -51,6 +84,7 @@ uint16_t colorBlack = GxEPD_BLACK;
 uint16_t colorRed = GxEPD_RED;
 
 XT_DAC_Audio_Class DacAudio(25, 0);
+
 XT_Wav_Class SoundTick(TickWav);
 XT_Wav_Class SoundTock(TockWav);
 XT_Wav_Class SoundStrike(StrikeWav);
@@ -58,6 +92,7 @@ XT_Wav_Class SoundExpl(ExplWav);
 XT_Wav_Class SoundWin(WinWav);
 XT_Wav_Class SoundAct(NeedyAct);
 XT_Wav_Class SoundWarn(NeedyWarn);
+
 XT_Instrument_Class SimonSays;
 int8_t PROGMEM ToneRed[] = {NOTE_CS5, SCORE_END};
 int8_t PROGMEM ToneBlue[] = {NOTE_E5, SCORE_END};
@@ -67,6 +102,12 @@ XT_MusicScore_Class SimonRed(ToneRed, TEMPO_MODERATO, &SimonSays);
 XT_MusicScore_Class SimonBlue(ToneBlue, TEMPO_MODERATO, &SimonSays);
 XT_MusicScore_Class SimonGreen(ToneGreen, TEMPO_MODERATO, &SimonSays);
 XT_MusicScore_Class SimonYellow(ToneYellow, TEMPO_MODERATO, &SimonSays);
+
+XT_Instrument_Class DisInstrument;
+// int8_t DisTone[] = {NOTE_CS5, SCORE_END};
+// XT_MusicScore_Class DisScore(DisTone, TEMPO_PRESTISSIMO, &DisInstrument);
+// XT_Sequence_Class DisSequence;
+
 bool simon_delay;
 byte simon_sound;
 bool simon_cued;
@@ -75,6 +116,10 @@ bool needy_cued;
 byte needy_sound;
 bool needy_repeat;
 int32_t needy_time;
+
+int8_t sound_test_counter;
+
+XT_MusicScore_Class *test_array[4] = {&SimonRed, &SimonBlue, &SimonGreen, &SimonYellow};
 
 char serial_number[] = "XXXXXX";
 bool serial_inbox = false;
@@ -96,7 +141,6 @@ void draw_serial() {
     u8g2Fonts.setFontMode(1);
     u8g2Fonts.setFontDirection(1);
 
-    Serial.println("About to draw...");
     display.firstPage();
     do {
         display.fillScreen(colorWhite);
@@ -114,11 +158,9 @@ void draw_serial() {
         u8g2Fonts.print("SERI");
         u8g2Fonts.setCursor(90, 154);
         u8g2Fonts.print("AL #");
-
     }
-
     while (display.nextPage());
-    delay(1000);
+    // delay(1000);
 }
 
 //**********************************************************************
@@ -253,7 +295,7 @@ void playNeedy() {
                 break;
         }
         if (needy_repeat) {
-            Serial.println("Repeat this in 1 sec...");
+            // Serial.println("Repeat this in 1 sec...");
             needy_time += 1500;
             needy_repeat = false;
             needy_cued = true;
@@ -265,54 +307,86 @@ void playNeedy() {
 // FUNCTIONS: Main
 //**********************************************************************
 
+int32_t test_timer;
+int8_t disdirection = 1;
+int16_t disvol = 40;
+int16_t disfreq = FNOTE_C3;
+int16_t disvolstep = 1;
+int16_t disfreqstepdiv = 10;
+int32_t time_step;
+int32_t lastmillis;
+
 void setup() {
     // Start serial connection
-    Serial.begin(115200);
+    DEBUG_SERIAL(115200);
+    DEBUG_PRINTLN("== KTOME: Widget ==");
+    // Serial.begin(115200);
     // while (!Serial);
-    Serial.println("== KTOME: Widget ==");
+    // Serial.println("== KTOME: Widget ==");
 
+    // Start CAN bus
+    CAN_ID = can_ids.Widgets;
+    ktomeCAN.setId(CAN_ID);
+    ktomeCAN.start();
+    DEBUG_PRINT("My ID is:   0b");
+    DEBUG_PADZERO(CAN_ID);
+    DEBUG_PRINTLNBIN(CAN_ID);
+
+    // display.init();
+    // u8g2Fonts.begin(display);
+    EINK_INIT();
+    EINK_FONTS(display);
+
+    // Temp init of eink display
     serial_number[0] = 'K';
     serial_number[1] = 'T';
     serial_number[2] = '0';
     serial_number[3] = 'M';
     serial_number[4] = 'E';
     serial_number[5] = '1';
-    Serial.println("Serial set!");
+    DEBUG_PRINTLN("Serial set!");
+    EINK_DRAW();
+    DEBUG_PRINTLN("Serial drawn!");
 
-    draw_serial();
-    Serial.println("Serial drawn!");
+    // SimonSays.SetInstrument(3);
+    // SimonSays.SetWaveForm(WAVE_SINE);
 
-    // Start CAN bus
-    CAN_ID = can_ids.Widgets;
-    ktomeCAN.setId(CAN_ID);
-    ktomeCAN.start();
-    // start the CAN bus at 500 kbps
-    if (!ktomeCAN.start()) {
-        Serial.println("Starting CAN failed!");
-        while (1)
-        ;
-    }
-    Serial.print("My ID is:   0b");
-    ktomeCAN.padZeros(CAN_ID);
-    Serial.println(CAN_ID, BIN);
-    //  Serial.print("My mask is: 0b");
-    //  ktomeCAN.padZeros(ktomeCAN.can_mask);
-    //  Serial.println(ktomeCAN.can_mask, BIN);
-
-    pinMode(PIN_LED, OUTPUT);
-    digitalWrite(PIN_LED, LOW);
-
-    display.init();
-    u8g2Fonts.begin(display);
-
-    SimonSays.SetInstrument(3);
+    // New to stop pop
+    DEBUG_PRINTLN("Set Simon instrument...");
+    // SimonSays.Init();
+    SimonSays.SetInstrument(0);
     SimonSays.SetWaveForm(WAVE_SINE);
-
+    XT_Envelope_Class *SimonEnv = SimonSays.AddEnvelope();
+    int16_t note_dur = 480; // Duration for envelope parts in ms, so aiming for 500ms total
+    int16_t note_pad = 18;
+    SimonEnv->AddPart(note_dur-note_pad,127,127);
+    SimonEnv->AddPart(note_pad,0);
+    SimonEnv->AddPart(3000,0);
+    
     SoundWarn.Repeat=2;
+
+    DEBUG_PRINTLN("Set CapDis instrument...");
+    DisInstrument.SetInstrument(0);
+    DisInstrument.SetWaveForm(WAVE_SINE);
+    // DisSequence.AddPlayItem(&DisScore); // This should repeat this note
+    DisInstrument.RepeatForever = true;
+    DisInstrument.SetFrequency(disfreq);
+    DisInstrument.SetDuration(50);
+    DisInstrument.Volume = disvol;
+
+    // WiFi.mode(WIFI_MODE_NULL);
+    // btStop();
+
+    DEBUG_PRINTLN("Setup done!");
 }
 
 void loop() {
+    lastmillis = thismillis; // Only for test - cap dis
+    time_step = thismillis - lastmillis; // Only for test - cap dis
     thismillis = millis();
+
+    #ifndef TEST_SOUND // SOUND TEST OFF
+
     CANInbox();
     if (serial_inbox) {
         draw_serial();
@@ -326,9 +400,7 @@ void loop() {
             }
             if (thismillis >=
                 (tickmillis + 50 +
-                (1000 / (1 + strike_number * 0.25)))) { // Sound a tick on cue in
-                                                        // case we have a delay in
-                                                        // CAN heartbeat
+                (1000 / (1 + strike_number * 0.25)))) { // Sound a tick on cue in case we have a delay in CAN heartbeat
                 tickmillis = millis();
                 DacAudio.Play(&SoundTick);
                 tockdone = false;
@@ -340,4 +412,64 @@ void loop() {
     playSimon();
     playNeedy();
     DacAudio.FillBuffer();
+
+    #else // SOUND TEST ON
+
+        // Cap dis code
+        disvol += (disvolstep*disdirection*time_step/1000.0);
+        disfreq += ((disfreq / disfreqstepdiv)*disdirection*time_step/1000.0);
+        DisInstrument.SetFrequency(disfreq);
+        DisInstrument.Volume = disvol;
+        DEBUG_PRINT("Setting dis vars - vol: ");
+        DEBUG_PRINT(disvol);
+        DEBUG_PRINT(", freq: ");
+        DEBUG_PRINTLN(disfreq);
+
+    if (thismillis >= test_timer) {
+        test_timer = thismillis + random(500)+ 2000;
+
+        disdirection = -disdirection;
+        if (disdirection==1){
+            DEBUG_PRINTLN("Increasing...");
+        } else {
+            DEBUG_PRINTLN("Decreasing...");
+        }
+        
+        // simon_sound = random(4);
+        // simon_cued = true;
+        // simon_time = millis();
+        // playSimon();
+        
+        // DEBUG_PRINTLN("Playing tone...");
+        // switch (sound_test_counter) {
+        //     case 0:
+        //         DacAudio.Play(&SoundStrike);
+        //         break;
+        //     case 1:
+        //         DacAudio.Play(&SoundExpl);
+        //         break;
+        //     case 2:
+        //         DacAudio.Play(&SoundWin);
+        //         break;
+        //     case 3:
+        //         DacAudio.Play(&SoundAct);
+        //         break;
+        //     case 4:
+        //         DacAudio.Play(&SoundWarn);
+        //         break;
+        //     case 5:
+        //         simon_sound = random(4);
+        //         simon_cued = true;
+        //         simon_time = millis();
+        //         playSimon();
+        //         break;
+        // // }
+        // sound_test_counter++;
+        // if (sound_test_counter >= 6){ sound_test_counter = 0; }
+    }
+
+    #endif
+
+    DacAudio.FillBuffer(); 
+    // delay(1);
 }

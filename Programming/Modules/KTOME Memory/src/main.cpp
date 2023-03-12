@@ -20,6 +20,9 @@
 #include <KTOME_common.h>
 #include <KTOME_Memory.h>
 #include <config.h>
+#include <WiFi.h>
+#include <esp_wifi.h>
+#include "driver/adc.h"
 
 //**********************************************************************
 // GLOBAL VARIABLES
@@ -83,6 +86,10 @@ void isr();
 // FUNCTIONS: Main
 //**********************************************************************
 void setup() {
+    adc_power_off();
+    WiFi.disconnect(true);  // Disconnect from the network
+    WiFi.mode(WIFI_OFF);
+
     // Start serial connection
     Serial.begin(115200);
     while (!Serial);
