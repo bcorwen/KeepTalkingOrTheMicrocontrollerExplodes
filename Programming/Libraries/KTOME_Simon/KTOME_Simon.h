@@ -11,7 +11,7 @@
 #define SIMON_L_R   GPIO_NUM_23
 #define SIMON_L_B   GPIO_NUM_18
 #define SIMON_L_G   GPIO_NUM_16
-#define SIMON_L_Y   GPIO_NUM_15
+#define SIMON_L_Y   GPIO_NUM_17
 
 class KTOME_Simon {
 	private:

@@ -20,8 +20,21 @@
 
 class KTOME_Vent {
 	private:
+        // Standard
+        byte strike_count;
+        bool outbox_waiting;
+        String outbox_msg;
+        bool serial_vowels;
+        bool serial_odd;
+        byte battery_number;
+        bool ind_car;
+        bool ind_frk;
+        bool port_s;
+        bool port_p;
+        byte logicCheck();
+        
+        // Specific
 		Switch switches[2]; // 0 = Yes, 1 = No
-        // LedBlinkable leds;
         int32_t needy_timer;
         int32_t msg_timer;
         byte msg_stage; // 0 = none, 1 - 3 = YES correct, 4 - 5 = NO incorrect
@@ -37,27 +50,42 @@ class KTOME_Vent {
         byte sfx_alert;
         byte sfx_wake;
         bool hasButtonBeenPushed(byte button_number);
-        byte logicCheck();
         byte stageChange();
-    
-    protected:
-
-	public:
-        void start(); // Initialise Keypad object
-        void generate(); // Generate a game (i.e. keypad_setup)
         void sleep();
-        void reset();
-        void inputCheck(); // Will check input button to see if right / wrong - Feed in button number, will give a "correct", "wrong" or "no action" answer.
         void drawScreen();
         void clearScreen();
+        // byte sendSound();
+
+	public:
+        // Standard
+        bool game_running;
+        bool module_solved;
+        byte intPin = -1; // No interrupt pin needed;
+        void start(); // Initialise Button object
+        void powerOn();
+        void generate(); // Generate a game (i.e. button_setup)
+        void reset();
+        bool isManual();
+        byte manualConfirm();
+        byte timerUpdate(String timer_digits);
+        void widgetUpdate(bool vowels, bool odds, byte batts, bool cars, bool frks, bool serials, bool parallels);
+        void strikeUpdate(byte strikes);
+        String getManual(); // Sends CAN of keypad symbols, flashes module light before manual check
+        void gameStart();
+        byte inputCheck(); // Will check input button to see if right / wrong - Feed in button number, will give a "correct", "wrong" or "no action" answer.
+        bool isSolved();
+        void explode();
+        void defuse();
+        String outbox();
+        bool isOutbox();
         byte update();
-        // void gameStart();
+        bool needsIsr();
+        void isrHandler();
         bool isActive();
         bool isAwake();
         void activate();
-        void defused();
-        void explode();
-        byte sendSound();
+
+        // Specific
         KTOME_Vent();
 		
 };

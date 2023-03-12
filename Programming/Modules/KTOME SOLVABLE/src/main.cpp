@@ -117,7 +117,7 @@ void setup()
     // Setup FastLED
     fled.init(&leds[0], FLED_LENGTH);
     FastLED.addLeds<WS2812B, PIN_LED_STATUS, GRB>(leds, FLED_LENGTH).setCorrection( TypicalLEDStrip );
-    FastLED.setBrightness( 16 );
+    FastLED.setBrightness( 32 );
 
     // Setup module
     module.start(&fled);
@@ -172,7 +172,7 @@ void carPark()
             String temp_str = module.outbox();
             char CAN_message[temp_str.length() + 1];
             temp_str.toCharArray(CAN_message, temp_str.length() + 1);
-            ktomeCAN.send(can_ids.Widgets | CAN_ID, CAN_message, temp_str.length());
+            ktomeCAN.send(can_ids.Master | can_ids.Widgets | CAN_ID, CAN_message, temp_str.length());
         }
 
         fled.update();

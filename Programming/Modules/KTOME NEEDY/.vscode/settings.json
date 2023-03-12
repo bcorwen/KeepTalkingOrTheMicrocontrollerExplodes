@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "cstdlib": "cpp",
+        "*.tcc": "cpp"
+    }
+}

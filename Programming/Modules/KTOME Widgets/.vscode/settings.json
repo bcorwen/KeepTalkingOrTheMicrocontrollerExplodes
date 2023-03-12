@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "*.tcc": "cpp",
+        "exception": "cpp",
+        "functional": "cpp",
+        "numeric": "cpp",
+        "istream": "cpp",
+        "limits": "cpp",
+        "streambuf": "cpp",
+        "cinttypes": "cpp",
+        "cmath": "cpp"
+    }
+}

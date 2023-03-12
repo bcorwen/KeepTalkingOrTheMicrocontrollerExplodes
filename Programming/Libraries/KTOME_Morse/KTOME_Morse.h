@@ -16,10 +16,10 @@
 #define MORSE_OLED_CS   GPIO_NUM_5
 #define MORSE_OLED_DC   GPIO_NUM_17
 #define MORSE_OLED_RST  GPIO_NUM_16
-#define STEPPER_A       GPIO_NUM_21
-#define STEPPER_a       GPIO_NUM_22
-#define STEPPER_B       GPIO_NUM_32
-#define STEPPER_b       GPIO_NUM_33
+#define STEPPER_A       GPIO_NUM_21 // A-1A - blue
+#define STEPPER_a       GPIO_NUM_22 // A-1B - black
+#define STEPPER_B       GPIO_NUM_32 // B-1A - orange
+#define STEPPER_b       GPIO_NUM_33 // B-1B - yellow
 #define STEPPER_CALIBR  GPIO_NUM_27
 
 class KTOME_Morse {

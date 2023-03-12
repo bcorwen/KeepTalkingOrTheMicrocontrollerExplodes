@@ -1,4 +1,22 @@
-// #define DEBUG_ON // Comment this to disable Serial monitor
+//======================================================================
+//
+//  Keep Talking Or the Microcontroller Explodes!
+//
+//    - bcorwen, 05/02/23
+//======================================================================
+//
+//  Module: Venting Gas (Slave, Needy, Vanilla)
+//  version 0.8.0
+//
+//  Version goals: Split out module-specific library
+//
+//======================================================================
+
+// #define DEBUG 1
+
+//**********************************************************************
+// LIBRARIES
+//**********************************************************************
 
 #include <Arduino.h>
 #include <KTOME_common.h>
@@ -7,10 +25,20 @@
 #include <Cabin_16.h>
 #include <ShiftDisplay.h>
 
-#ifdef DEBUG_ON
-#define DebugSerial(...) Serial.printf(__VA_ARGS__)
-#else 
-#define DebugSerial(...)
+#ifdef DEBUG
+    #define DEBUG_SERIAL(x)     Serial.begin(x)
+    #define DEBUG_PRINT(x)      Serial.print(x)
+    #define DEBUG_PRINTBIN(x)   Serial.print(x, BIN)
+    #define DEBUG_PRINTLN(x)    Serial.println(x)
+    #define DEBUG_PRINTLNBIN(x) Serial.println(x, BIN)
+    #define DEBUG_PADZERO(x)    ktomeCAN.padZeros(x)
+#else
+    #define DEBUG_SERIAL(x)
+    #define DEBUG_PRINT(x)
+    #define DEBUG_PRINTBIN(x)
+    #define DEBUG_PRINTLN(x)
+    #define DEBUG_PRINTLNBIN(x)
+    #define DEBUG_PADZERO(x)
 #endif
 
 KTOME_Vent::KTOME_Vent() {
@@ -28,39 +56,63 @@ void KTOME_Vent::start() {
 void KTOME_Vent::reset() {
     clearScreen();
     // module_defused = false;
+    game_running = 0;
     msg_stage = 0;
     needy_active = 0;
     accept_input = false;
 }
 
-// void KTOME_Vent::gameStart() {
-    // #ifdef DEBUG
-    // Serial.println("Turn on the screen...");
-    // #endif
-    // drawScreen();
-// }
-
-void KTOME_Vent::generate() {
-    DebugSerial("Module awakes...\n");
-    needy_active = 2;
-    sfx_alert = 1;
-    sfx_wake = 1;
-    if (random(100) > 90) {
-        prompt_type = 1;
-    } else {
-        prompt_type = 0;
-    }
-    display_line[0] = word_list[prompt_type];
-    display_line[1] = word_list[2];
+void KTOME_Vent::powerOn() {
+    display_line[0] = "VENTING";
+    display_line[1] = "GAS";
     display_line[2] = "";
     drawScreen();
-    needy_timer = millis() + 40000; // 40 seconds
-    accept_input = true;
-    DebugSerial("Module awoken.\n");
+    String lastline = "ACTIVE";
+    int8_t lastlen = lastline.length();
+    for (byte ii = 0; ii <= lastlen; ii++){
+        delay(250);
+        display_line[2] = lastline.substring(0,ii) ;
+        drawScreen();
+    }
+    delay(500);
+    clearScreen();
+}
+
+void KTOME_Vent::generate() {
+    
+}
+
+bool KTOME_Vent::isManual() {
+    return false;
+}
+
+String KTOME_Vent::getManual() {
+    DEBUG_PRINTLN("ERROR: Should not have been asked to fetch manual setup!");
+    return "";
+}
+
+byte KTOME_Vent::manualConfirm() { // No further confirm needed for this module, return 0
+    return 0;
+}
+
+void KTOME_Vent::strikeUpdate(byte strikes) {
+    
+}
+
+byte KTOME_Vent::timerUpdate(String timer_digits) {
+    return 0;
+}
+
+void KTOME_Vent::widgetUpdate(bool vowels, bool odds, byte batts, bool cars, bool frks, bool serials, bool parallels) {
+    
+}
+
+void KTOME_Vent::gameStart() {
+    game_running = true;
 }
 
 void KTOME_Vent::sleep() {
-    DebugSerial("Module sleeps...\n");
+    DEBUG_PRINTLN("Module sleeps..");
     needy_active = 1;
     sfx_alert = 0;
     sfx_wake = 0;
@@ -70,46 +122,67 @@ void KTOME_Vent::sleep() {
     needy_timer = millis() + 10000 + random(30000); // Between 10 and 40 seconds sleep
 }
 
+bool KTOME_Vent::isSolved() {
+    return module_solved;
+}
+
 byte KTOME_Vent::update() {
     byte return_byte;
-    int32_t this_millis = millis();
-    if (needy_active == 2) {
-        display_timer = (999 + needy_timer - this_millis)/1000;
-        DebugSerial("%d\n",display_timer);
-        shift_timer.set(display_timer);
-        if (display_timer < 10) {
-            // shift_timer.setAt(0, '0');
-            // shift_timer.setAt(1, '0');
-            String disp_low = "0" + String(display_timer);
-            shift_timer.set(disp_low);
+
+    if (game_running){
+        int32_t this_millis = millis();
+        if (needy_active == 2) {
+            display_timer = (999 + needy_timer - this_millis)/1000;
+            // DEBUG_PRINTLN(display_timer);
+            shift_timer.set(display_timer);
+            if (display_timer < 10) {
+                // shift_timer.setAt(0, '0');
+                // shift_timer.setAt(1, '0');
+                String disp_low = "0" + String(display_timer);
+                shift_timer.set(disp_low);
+            }
+            shift_timer.show();
+            if (display_timer < 11 && sfx_alert == 1) {
+                sfx_alert = 2;
+            }
+        } else {
+            shift_timer.set("  ");
+            shift_timer.show();
         }
-        shift_timer.show();
-        if (display_timer < 11 && sfx_alert == 1) {
-            sfx_alert = 2;
+
+        if (msg_stage > 0 && this_millis > msg_timer) {
+            DEBUG_PRINTLN("Stage time reached...");
+            return_byte = stageChange();
+            if (return_byte > 0) {
+                return return_byte;
+            }
         }
-    } else {
-        shift_timer.set("  ");
-        shift_timer.show();
+
+        if (this_millis > needy_timer && needy_active > 0 && game_running) {
+            DEBUG_PRINTLN("Needy timer runs out...");
+            if (needy_active == 2) { // Needy is active so this indicates needy timer has run out...
+                clearScreen();
+                sleep();
+                return 1;
+            } else if (needy_active == 1) { // Needy is dormant, so wake this module up...
+                activate();
+            }
+        }
+
+        if (sfx_alert == 2) {
+            sfx_alert = 0;
+            outbox_waiting = true;
+            outbox_msg = "u6";
+            // return 1;
+            
+        } else if (sfx_wake == 1) {
+            sfx_wake = 0;
+            outbox_waiting = true;
+            outbox_msg = "u5";
+            // return 2;
+        }
     }
 
-    if (msg_stage > 0 && this_millis > msg_timer) {
-        DebugSerial("Stage time reached...\n");
-        return_byte = stageChange();
-        if (return_byte > 0) {
-            return return_byte;
-        }
-    }
-
-    if (this_millis > needy_timer) {
-        DebugSerial("Needy timer runs out...\n");
-        if (needy_active == 2) { // Needy is active so this indicates needy timer has run out...
-            clearScreen();
-            sleep();
-            return 1;
-        } else if (needy_active == 1) { // Needy is dormant, so wake this module up...
-            generate();
-        }
-    }
     return 0;
 }
 
@@ -205,18 +278,19 @@ byte KTOME_Vent::stageChange() {
 
 void KTOME_Vent::drawScreen() {
     //clearScreen();
-    u8g2.firstPage();  
+    DEBUG_PRINTLN("Drawing...");
+    u8g2.firstPage();
     do {
         // for (byte ii = 0; ii < 5; ii++) {
-            DebugSerial("Drawing...\n");
-            u8g2.setCursor((64 - (u8g2.getStrWidth(display_line[0].c_str())/ 2)), 22);
-            u8g2.print(display_line[0]);
-            u8g2.setCursor((64 - (u8g2.getStrWidth(display_line[1].c_str())/ 2)), 40);
-            u8g2.print(display_line[1]);
-            u8g2.setCursor((64 - (u8g2.getStrWidth(display_line[2].c_str())/ 2)), 58);
-            u8g2.print(display_line[2]);
+        u8g2.setCursor((64 - (u8g2.getStrWidth(display_line[0].c_str())/ 2)), 22);
+        u8g2.print(display_line[0]);
+        u8g2.setCursor((64 - (u8g2.getStrWidth(display_line[1].c_str())/ 2)), 40);
+        u8g2.print(display_line[1]);
+        u8g2.setCursor((64 - (u8g2.getStrWidth(display_line[2].c_str())/ 2)), 58);
+        u8g2.print(display_line[2]);
         // }
     } while( u8g2.nextPage() );
+    DEBUG_PRINTLN("Drawn!");
 }
 
 void KTOME_Vent::clearScreen() {
@@ -227,39 +301,32 @@ void KTOME_Vent::clearScreen() {
     } while( u8g2.nextPage() );
 }
 
-void KTOME_Vent::inputCheck() {
-    DebugSerial("Inputs checked...\n");
+byte KTOME_Vent::inputCheck() {
+    // DEBUG_PRINTLN("Inputs checked...");
     // byte result_byte = 0;
     for (byte ii = 0; ii < 2; ii++)
     {
         if (hasButtonBeenPushed(ii)) { // Submit button
         button_pressed = ii;
-        if (ii == 0) {
-            msg_stage = 1;
-        } else {
-            msg_stage = 4;
-        }
-        // result_byte = logicCheck(ii);
-        //     if (result_byte == 1) {
-        //         return 2; // Correct
-        //     } else if (result_byte == 2) {
-        //         return 1; // Wrong and strike
-        //     } else { 
-                
-        //         return 0; // Wrong but no strike
-        //     }
+            if (ii == 0) {
+                msg_stage = 1;
+            } else {
+                msg_stage = 4;
+            }
         }
     }
-    // return 0;
+    return 0;
 }
 
 bool KTOME_Vent::hasButtonBeenPushed(byte button_number) {
     if (switches[button_number].hasChanged()) {
         if (switches[button_number].isPressed()) {
-            DebugSerial("%d button pressed!\n", button_number);
+            DEBUG_PRINT(button_number);
+            DEBUG_PRINTLN("button pressed!");
             return true;
         } else {
-            DebugSerial("%d button released!\n", button_number);
+            DEBUG_PRINT(button_number);
+            DEBUG_PRINTLN("button released!");
             return false;
         }
     } else {
@@ -268,7 +335,7 @@ bool KTOME_Vent::hasButtonBeenPushed(byte button_number) {
 }
 
 byte KTOME_Vent::logicCheck(){
-    DebugSerial("Logic checked...\n");
+    DEBUG_PRINTLN("Logic checked...");
     if (button_pressed == prompt_type) { // Correct response
         return 1;
     } else if (button_pressed == 0) {
@@ -295,29 +362,62 @@ bool KTOME_Vent::isAwake() {
 }
 
 void KTOME_Vent::activate() {
-    generate();
+    DEBUG_PRINTLN("Module awakes...");
+    needy_active = 2;
+    sfx_alert = 1;
+    sfx_wake = 1;
+    if (random(100) > 90) {
+        prompt_type = 1;
+    } else {
+        prompt_type = 0;
+    }
+    display_line[0] = word_list[prompt_type];
+    display_line[1] = word_list[2];
+    display_line[2] = "";
+    drawScreen();
+    needy_timer = millis() + 40000; // 40 seconds
+    accept_input = true;
+    DEBUG_PRINTLN("Module awoken.");
 }
 
-void KTOME_Vent::defused() {
-    DebugSerial("Defused method\n");
-    // leds.write(false);
+void KTOME_Vent::defuse() {
+    DEBUG_PRINTLN("Defused method");
+    game_running = false;
 }
 
 void KTOME_Vent::explode() {
-    DebugSerial("Explode!\n");
+    DEBUG_PRINTLN("Explode!");
     clearScreen();
+    game_running = false;
 }
 
-byte KTOME_Vent::sendSound() {
-    if (sfx_alert == 2) {
-        sfx_alert = 0;
-        return 1;
-    } else if (sfx_wake == 1) {
-        sfx_wake = 0;
-        return 2;
-    }
-    return 0;
+String KTOME_Vent::outbox() {
+    outbox_waiting = false;
+    return outbox_msg;
 }
+
+bool KTOME_Vent::isOutbox() {
+    return outbox_waiting;
+}
+
+bool KTOME_Vent::needsIsr() {
+    return false;
+}
+
+void KTOME_Vent::isrHandler() {
+    
+}
+
+// byte KTOME_Vent::sendSound() {
+    // if (sfx_alert == 2) {
+    //     sfx_alert = 0;
+    //     return 1;
+    // } else if (sfx_wake == 1) {
+    //     sfx_wake = 0;
+    //     return 2;
+    // }
+    // return 0;
+// }
 
 // U8G2_SSD1309_128X64_NONAME0_1_4W_SW_SPI u8g2(U8G2_R0, VENT_OLED_CLK, VENT_OLED_DAT, VENT_OLED_CS, VENT_OLED_DC, VENT_OLED_RST);  
 U8G2_SSD1309_128X64_NONAME0_1_4W_HW_SPI u8g2(U8G2_R0, VENT_OLED_CS, VENT_OLED_DC, VENT_OLED_RST);  

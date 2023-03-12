@@ -2,14 +2,12 @@
 //
 //  Keep Talking Or the Microcontroller Explodes!
 //
-//    - bcorwen, 18/10/21
+//    - bcorwen, 06/02/23
 //======================================================================
 //
 //  Module: Debugger (MASTER)
 //
-//  version 0.6.4
-//
-//  
+//  version 0.8.0
 //
 //======================================================================
 
@@ -112,7 +110,7 @@ Switch encoder_press;
 LiquidCrystal myLCD(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D0, PIN_LCD_D1, PIN_LCD_D2, PIN_LCD_D3);
 
 int8_t menu_selected = 0;
-const byte menu_max = 16;
+const byte menu_max = 20;
 
 String menu_choice[menu_max] = {"Poll modules  ",
                                 "Init game     ",
@@ -129,26 +127,34 @@ String menu_choice[menu_max] = {"Poll modules  ",
                                 "Set time: 0451",
                                 "Needy trigger ",
                                 "Send Defuse   ",
-                                "Send Strike   "
+                                "Send Strike   ",
+                                "Cap starting  ",
+                                "Cap +00001    ",
+                                "Cap -45000    ",
+                                "Cap pop!      "
                                 };
 
-char menu_can_msg[menu_max][9] = {"P",
-                                  "I",
-                                  "C",
-                                  "M",
-                                  "A",
-                                  "Z1",
-                                  "Z0",
-                                  "W0000000",
-                                  "SXX0XX0",
-                                  "X0",
-                                  "H",
-                                  "T0238",
-                                  "T0451",
-                                  "N",
-                                  "D",
-                                  "X"
-                                  };
+char menu_can_msg[menu_max][9] =   {"P",
+                                    "I",
+                                    "C",
+                                    "M",
+                                    "A",
+                                    "Z1",
+                                    "Z0",
+                                    "W0000000",
+                                    "SXX0XX0",
+                                    "X0",
+                                    "H",
+                                    "T0238",
+                                    "T0451",
+                                    "N",
+                                    "D",
+                                    "X",
+                                    "u8",
+                                    "u+00001",
+                                    "u-00001",
+                                    "u7"
+                                    };
 
 byte menu_can_lng[menu_max] = {1, 1, 1, 1, 1, 2, 2, 8, 7, 2, 1, 5, 5, 1, 1, 1};
 
@@ -175,12 +181,12 @@ void setup() {
 
   // Start CAN bus
   ktomeCAN.setId(CAN_ID, CAN_MASK);
-  ktomeCAN.start();
+  ktomeCAN.start(27, 26);
   // start the CAN bus at 500 kbps
-  if (!ktomeCAN.start()) {
-    Serial.println("Starting CAN failed!");
-    while (1);
-  }
+//   if (!ktomeCAN.start()) {
+//     Serial.println("Starting CAN failed!");
+//     while (1);
+//   }
   Serial.print("My ID is:   0b");
   ktomeCAN.padZeros(CAN_ID);
   Serial.println(CAN_ID, BIN);
@@ -203,6 +209,7 @@ void setup() {
   myLCD.clear();
   myLCD.setCursor(0,0);
   myLCD.print(menu_choice[menu_selected]);
+    // myLCD.print("   3.505  Mhz   ");
   myLCD.setCursor(0,1);
   myLCD.print("> \"        \"");
 

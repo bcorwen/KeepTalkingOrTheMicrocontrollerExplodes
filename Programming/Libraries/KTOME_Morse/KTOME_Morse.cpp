@@ -52,7 +52,8 @@ void KTOME_Morse::start(FLedPWM *fleds) {
     switches[0].init(MORSE_ENS);
     switches[1].init(STEPPER_CALIBR);
     ESP32Encoder::useInternalWeakPullResistors=UP;
-    encoder.attachHalfQuad(MORSE_ENA, MORSE_ENB);
+    // encoder.attachHalfQuad(MORSE_ENA, MORSE_ENB);
+    encoder.attachSingleEdge(MORSE_ENA, MORSE_ENB);
     encoder.setCount(0);
     encoder_tracker = 0;
     u8g2.begin();
@@ -65,36 +66,60 @@ void KTOME_Morse::reset() {
     strike_count = 0;
     game_running = false;
     module_solved = false;
+    freq_choice = 0;
     clearScreen();
+    // stepper.moveTo(freq_list[freq_choice]*28); //200
+    // while (stepper.currentPosition()!=200){
+    //     stepper.runSpeedToPosition();
+    // }
 }
 
 void KTOME_Morse::powerOn() {
-    fleds_addr->blink(1, CRGB::Orange, CRGB::Black, 150, 100, 10);
+    // fleds_addr->blink(1, CRGB::Orange, CRGB::Black, 150, 100, 10);
+    u8g2.firstPage();  
+    do {
+        // for (byte ii = 0; ii < 5; ii++) {
+            // DEBUG_PRINT("Drawing...");
+            u8g2.setCursor(8, 28); // 40 was old, centred y
+            u8g2.print("Scanning...");
+
+        // }
+    } while( u8g2.nextPage() );
     calibrateStepper();
 }
 
 void KTOME_Morse::calibrateStepper() {
     stepper.setMaxSpeed(stepperSpeedMax);
-    stepper.moveTo(-9000);
-    stepper.setSpeed(stepperSpeed);
+    stepper.setCurrentPosition(0);
+    stepper.moveTo(-4000);
+    stepper.setSpeed(250); //250
     DEBUG_PRINTLN("Finding calibration point...");
+    uint32_t start_time = millis();
     do {
         if (!stepper_calibrated && switches[1].hasChanged()) {
             if (switches[1].isPressed()) {
                 // This calibration button has just been triggered
                 DEBUG_PRINTLN("Calibration point found!");
-                stepper.setCurrentPosition(-100);
-                stepper.moveTo(150);
-                stepper.setSpeed(stepperSpeed);
                 stepper_calibrated = true;
             }
+        // } else if (!stepper_calibrated && (millis()>start_time+5000)) {
+        //     DEBUG_PRINTLN("Calibration time runs over!");
+        //     stepper_calibrated = true;
         }
         stepper.runSpeedToPosition();
     } while (!stepper_calibrated);
+    stepper.setCurrentPosition(60); //-160
+    stepper.moveTo(freq_list[0]*28); //200
+    stepper.setSpeed(400); //400
+
+    u8g2.clear();
+
+    fleds_addr->blink(1, CRGB::Orange, CRGB::Black, 150, 100, 10);
     DEBUG_PRINTLN("Calibration ending");
 }
 
 void KTOME_Morse::generate() {
+    freq_choice = 0;
     selected_word = random(16);
     DEBUG_PRINT("The morse code is: ");
     DEBUG_PRINTLN(word_list[selected_word]);
@@ -322,15 +347,15 @@ void KTOME_Morse::blinkLetter() {
 void KTOME_Morse::drawScreen() {
     u8g2.firstPage();  
     do {
-        for (byte ii = 0; ii < 5; ii++) {
+        // for (byte ii = 0; ii < 5; ii++) {
             // DEBUG_PRINT("Drawing...");
-            u8g2.setCursor(8, 40);
+            u8g2.setCursor(10, 28); // 40 was old, centred y
             u8g2.print("3.");
             
             u8g2.print(freq_list[freq_choice]+500);
-            u8g2.setCursor(62, 40);
+            u8g2.setCursor(68, 28); // 40 was old, centred y
             u8g2.print(" MHz");
-        }
+        // }
     } while( u8g2.nextPage() );
 }
 
@@ -347,7 +372,7 @@ byte KTOME_Morse::inputCheck() {
         freq_choice = constrain(freq_choice + (encoder.getCount() - encoder_tracker),0,15);
         encoder_tracker = encoder.getCount();
         drawScreen();
-        stepper.moveTo(freq_list[freq_choice]*30);
+        stepper.moveTo(freq_list[freq_choice]*28);
         stepper.setSpeed(stepperSpeed);
     }
 

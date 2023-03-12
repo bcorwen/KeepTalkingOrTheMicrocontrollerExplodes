@@ -1,0 +1,32 @@
+name: build
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - "extras/assets/**"
+      - "extras/hardware/**"
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - "extras/assets/**"
+      - "extras/hardware/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Check clang-format conformity
+        run: bash extras/ci/clang-lint.sh
+
+      - name: Build on Arduino CLI
+        run: bash extras/ci/build-arduino.sh
+
+      - name: Build on PlatformIO
+        run: bash extras/ci/build-platformio.sh

@@ -1,0 +1,28 @@
+name: docs
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - "extras/assets/**"
+      - "extras/hardware/**"
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - "extras/assets/**"
+      - "extras/hardware/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Doxygen
+        env:
+          GH_REPO_TOKEN: ${{ secrets.GH_REPO_TOKEN }}
+        run: bash extras/ci/doxygen.sh

@@ -19,7 +19,7 @@
 
 #define DEBUG 1
 
-#define MODULE_TYPE MODULE_MEMORY
-#define MODULE_MUID 1
+#define MODULE_TYPE MODULE_SIMON
+#define MODULE_MUID 2
 
 #endif

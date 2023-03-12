@@ -2,10 +2,10 @@
 //
 //  Keep Talking Or the Microcontroller Explodes!
 //
-//    - bcorwen, 03/06/21
+//    - bcorwen, 05/02/23
 //======================================================================
 //
-//  Module: Generic Solvable module (Slave, Standard, Vanilla)
+//  Module: Generic Needy module (Slave, Needy, Vanilla)
 //  version 0.8.0
 //
 //======================================================================
@@ -29,7 +29,7 @@
 #define MODULE_MAZE         12
 #define MODULE_PASSWORD     13
 #define MODULE_VENT         14
-#define MODULE_CAPACITOR    15
+#define MODULE_CAPDIS       15
 #define MODULE_KNOB         16
 
 #include <config.h>
@@ -105,17 +105,20 @@
     // #include <KTOME_Maze.h>
     KTOME_Maze module;
 #elif MODULE_TYPE == MODULE_PASSWORD
-    #define CONFIG_CAN_MODULE_TYPE  can_ids.Simon
+    #define CONFIG_CAN_MODULE_TYPE  can_ids.Password
     #define fled_length 1
     // #include <KTOME_Password.h>
     KTOME_Password module;
     String module_name = "=== KTOME: PASSWORD ===";
 #elif MODULE_TYPE == MODULE_VENT
-    // #include <KTOME_Vent.h>
+    #define CONFIG_CAN_MODULE_TYPE  can_ids.Morse
+    #define fled_length 2
+    #include <KTOME_Vent.h>
     KTOME_Vent module;
-#elif MODULE_TYPE == MODULE_CAPACITOR
+    String module_name = "=== KTOME: VENTING GAS ===";
+#elif MODULE_TYPE == MODULE_CAPDIS
     // #include <KTOME_Capacitor.h>
-    KTOME_Capacitor module;
+    KTOME_CapDis module;
 #elif MODULE_TYPE == MODULE_KNOB
     // #include <KTOME_Knob.h>
     KTOME_Knob module;

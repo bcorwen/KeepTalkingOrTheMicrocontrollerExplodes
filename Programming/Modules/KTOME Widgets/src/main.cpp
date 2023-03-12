@@ -2,14 +2,15 @@
 //
 //  Keep Talking Or the Microcontroller Explodes!
 //
-//    - bcorwen, 04/05/21
+//    - bcorwen, 04/02/23
 //======================================================================
 //
 //  Module: Widgets (SLAVE)
 //
-//  version 0.6.0
+//  version 0.7.0
 //
-//  Goal for this version: Add in Simon sound handling
+//  Goal for this version: Add Cap Dis sound, can track and handle
+//                          multiple sound modules of the same type
 //
 //======================================================================
 
@@ -27,7 +28,7 @@
 #include <XT_DAC_Audio.h>
 
 #define DEBUG 1
-#define TEST_SOUND 1
+// #define TEST_SOUND 1
 #define EINK_DISPLAY 1
 
 #ifdef DEBUG
@@ -103,19 +104,31 @@ XT_MusicScore_Class SimonBlue(ToneBlue, TEMPO_MODERATO, &SimonSays);
 XT_MusicScore_Class SimonGreen(ToneGreen, TEMPO_MODERATO, &SimonSays);
 XT_MusicScore_Class SimonYellow(ToneYellow, TEMPO_MODERATO, &SimonSays);
 
+// Capacitor discharge:
+// Tone sounds with 25 seconds left
+// When discharging, will increase timer x5 normal speed
+// Tone starts 300 Hz and ends 450 Hz
 XT_Instrument_Class DisInstrument;
-// int8_t DisTone[] = {NOTE_CS5, SCORE_END};
-// XT_MusicScore_Class DisScore(DisTone, TEMPO_PRESTISSIMO, &DisInstrument);
-// XT_Sequence_Class DisSequence;
+XT_Wav_Class SoundCapPop(CapPopWav);
+byte cap_tone_playing = false;
 
 bool simon_delay;
 byte simon_sound;
 bool simon_cued;
 int32_t simon_time;
+
 bool needy_cued;
 byte needy_sound;
 bool needy_repeat;
 int32_t needy_time;
+
+int32_t distimeleft = 45000;
+int8_t disdirection = -1; // -1 is decreasing time (increasing tone), 1 is increasing time (decreasing tone)
+int32_t disvol = 0; // 0 @25s left, 127 @0s left
+int32_t disfreq = 300;
+int32_t disvolstepsec = 1000*127/25; // 5k steps per second, 5 steps per ms,
+int32_t disfreqstepsec = 1000*150/25; // 6k steps per second, 6 steps per ms
+int8_t disvollut[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11, 12, 12, 12, 13, 13, 14, 15, 15, 16, 16, 17, 18, 19, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 32, 33, 34, 36, 37, 39, 40, 42, 44, 46, 47, 49, 52, 54, 56, 58, 61, 63, 66, 69, 72, 75, 78, 81, 84, 88, 92, 96, 100, 104, 108, 113, 117, 122, 127};
 
 int8_t sound_test_counter;
 
@@ -132,6 +145,10 @@ bool tickdone = false;
 bool tickstarted = false;
 long tickprotect;
 bool game_running = false;
+
+int32_t test_timer;
+int32_t time_step;
+int32_t lastmillis;
 
 //**********************************************************************
 // E-PAPER DISPLAY
@@ -185,20 +202,20 @@ void CANInbox() {
     if (ktomeCAN.isMessageWaiting()) { // Outstanding messages to handle
         ktomeCAN.receive();
         if (ktomeCAN.can_msg[0] == 'S') {
-            Serial.println("Serial number received!");
+            DEBUG_PRINTLN("Serial number received!");
             serial_number[0] = ktomeCAN.can_msg[1];
             serial_number[1] = ktomeCAN.can_msg[2];
             serial_number[2] = ktomeCAN.can_msg[3];
             serial_number[3] = ktomeCAN.can_msg[4];
             serial_number[4] = ktomeCAN.can_msg[5];
             serial_number[5] = ktomeCAN.can_msg[6];
-            Serial.println(serial_number);
+            DEBUG_PRINTLN(serial_number);
             serial_inbox = true;
         } else if (ktomeCAN.can_msg[0] == 'X') {
             // Play strike sound
             DacAudio.Play(&SoundStrike);
             strike_number = ktomeCAN.can_msg[1] - '0';
-            Serial.println(strike_number, DEC);
+            DEBUG_PRINTLN(strike_number);
         } else if (ktomeCAN.can_msg[0] == 'H') {
             // Play ticking sound
             tickmillis = millis();
@@ -210,6 +227,7 @@ void CANInbox() {
             game_running = false;
             tockdone = true;
             tickstarted = false;
+            cap_tone_playing = false;
             byte bomb_exploded;
             if (ktomeCAN.can_msg[1] == '1'){
                 bomb_exploded = 1;
@@ -227,7 +245,24 @@ void CANInbox() {
             game_running = true;
             strike_number = 0;
         } else if (ktomeCAN.can_msg[0] == 'u') {
-            if (ktomeCAN.can_msg[1] < '5') {
+            if (ktomeCAN.can_msg[1] == '+') {
+                String temp = ktomeCAN.can_msg;
+                temp = temp.substring(2);
+                int32_t needy_time = temp.toDouble();
+                distimeleft = needy_time;
+                disdirection = +5;
+            } else if (ktomeCAN.can_msg[1] == '-') {
+                String temp = ktomeCAN.can_msg;
+                temp = temp.substring(2);
+                int32_t needy_time = temp.toDouble();
+                distimeleft = needy_time;
+                disdirection = -1;
+                if (!cap_tone_playing){
+                    cap_tone_playing = true;
+                    DacAudio.Play(&DisInstrument);
+                    
+                }
+            } else if (ktomeCAN.can_msg[1] < '5') {
                 simon_sound = ktomeCAN.can_msg[1] - '0';
                 simon_delay = ktomeCAN.can_msg[2] - '0';
                 simon_cued = true;
@@ -236,9 +271,9 @@ void CANInbox() {
                 } else {
                     simon_time = millis();
                 }
-            } else {
+            } else if (ktomeCAN.can_msg[1] < '7') {
                 needy_sound = ktomeCAN.can_msg[1] - '5';
-                Serial.println(needy_sound);
+                // Serial.println(needy_sound);
                 needy_cued = true;
                 needy_time = millis();
                 if (needy_sound == 1) {
@@ -247,6 +282,9 @@ void CANInbox() {
                     needy_repeat = false;
                 }
             }
+        } else if (ktomeCAN.can_msg[0] == 'x' && (ktomeCAN.can_msg_id & can_ids.CapDis)>0){ // Capacitor discharge has struck
+            DacAudio.RemoveFromPlayList(&DisInstrument);
+            DacAudio.Play(&SoundCapPop);
         }
     }
 }
@@ -303,18 +341,23 @@ void playNeedy() {
     }
 }
 
+void playCapDis() {
+    if (cap_tone_playing){
+        distimeleft += disdirection * time_step;
+
+        disvol = 127 - (distimeleft/1000.0 * disvolstepsec/1000.0);
+        if (disvol < 0){
+            disvol = 0;
+        }
+        disfreq = 450 - (distimeleft/1000.0 * disfreqstepsec/1000.0);
+        DisInstrument.SetFrequency(disfreq);
+        DisInstrument.Volume = disvollut[disvol];
+    }
+}
+
 //**********************************************************************
 // FUNCTIONS: Main
 //**********************************************************************
-
-int32_t test_timer;
-int8_t disdirection = 1;
-int16_t disvol = 40;
-int16_t disfreq = FNOTE_C3;
-int16_t disvolstep = 1;
-int16_t disfreqstepdiv = 10;
-int32_t time_step;
-int32_t lastmillis;
 
 void setup() {
     // Start serial connection
@@ -368,11 +411,10 @@ void setup() {
     DEBUG_PRINTLN("Set CapDis instrument...");
     DisInstrument.SetInstrument(0);
     DisInstrument.SetWaveForm(WAVE_SINE);
-    // DisSequence.AddPlayItem(&DisScore); // This should repeat this note
     DisInstrument.RepeatForever = true;
-    DisInstrument.SetFrequency(disfreq);
-    DisInstrument.SetDuration(50);
-    DisInstrument.Volume = disvol;
+    DisInstrument.SetFrequency(300);
+    DisInstrument.SetDuration(100000);
+    // DacAudio.Play(&DisInstrument);
 
     // WiFi.mode(WIFI_MODE_NULL);
     // btStop();
@@ -382,8 +424,8 @@ void setup() {
 
 void loop() {
     lastmillis = thismillis; // Only for test - cap dis
-    time_step = thismillis - lastmillis; // Only for test - cap dis
     thismillis = millis();
+    time_step = thismillis - lastmillis; // Only for test - cap dis
 
     #ifndef TEST_SOUND // SOUND TEST OFF
 
@@ -411,29 +453,36 @@ void loop() {
     }
     playSimon();
     playNeedy();
+    playCapDis();
     DacAudio.FillBuffer();
 
     #else // SOUND TEST ON
 
-        // Cap dis code
-        disvol += (disvolstep*disdirection*time_step/1000.0);
-        disfreq += ((disfreq / disfreqstepdiv)*disdirection*time_step/1000.0);
-        DisInstrument.SetFrequency(disfreq);
-        DisInstrument.Volume = disvol;
-        DEBUG_PRINT("Setting dis vars - vol: ");
-        DEBUG_PRINT(disvol);
-        DEBUG_PRINT(", freq: ");
-        DEBUG_PRINTLN(disfreq);
+    distimeleft += disdirection * time_step;
 
-    if (thismillis >= test_timer) {
-        test_timer = thismillis + random(500)+ 2000;
+    if (distimeleft <= 0){
+        disdirection = 5;
+    } else if (distimeleft >= 45000){
+        disdirection = -1;
+    }
+    disvol = 127 - (distimeleft/1000.0 * disvolstepsec/1000.0);
+    if (disvol < 0){
+        disvol = 0;
+    }
+    disfreq = 450 - (distimeleft/1000.0 * disfreqstepsec/1000.0);
+    DisInstrument.SetFrequency(disfreq);
+    DisInstrument.Volume = disvollut[disvol];
 
-        disdirection = -disdirection;
-        if (disdirection==1){
-            DEBUG_PRINTLN("Increasing...");
-        } else {
-            DEBUG_PRINTLN("Decreasing...");
-        }
+    // if (thismillis >= test_timer) {
+    //     // test_timer = thismillis + random(500)+ 2000;
+    //     test_timer = thismillis + 20000;
+
+    //     disdirection = -disdirection;
+    //     if (disdirection==1){
+    //         DEBUG_PRINTLN("Increasing...");
+    //     } else {
+    //         DEBUG_PRINTLN("Decreasing...");
+    //     }
         
         // simon_sound = random(4);
         // simon_cued = true;
@@ -466,7 +515,7 @@ void loop() {
         // // }
         // sound_test_counter++;
         // if (sound_test_counter >= 6){ sound_test_counter = 0; }
-    }
+    // }
 
     #endif
 
