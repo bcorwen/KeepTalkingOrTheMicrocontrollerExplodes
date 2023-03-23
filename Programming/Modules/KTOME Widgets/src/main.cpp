@@ -2,15 +2,15 @@
 //
 //  Keep Talking Or the Microcontroller Explodes!
 //
-//    - bcorwen, 04/02/23
+//    - bcorwen, 22/03/23
 //======================================================================
 //
 //  Module: Widgets (SLAVE)
 //
-//  version 0.7.0
+//  version 0.9.0
 //
-//  Goal for this version: Add Cap Dis sound, can track and handle
-//                          multiple sound modules of the same type
+//  Goal for this version: Support for multiple audio-producing
+//                          modules of same type
 //
 //======================================================================
 
@@ -93,6 +93,7 @@ XT_Wav_Class SoundExpl(ExplWav);
 XT_Wav_Class SoundWin(WinWav);
 XT_Wav_Class SoundAct(NeedyAct);
 XT_Wav_Class SoundWarn(NeedyWarn);
+XT_Wav_Class SoundCapPop(CapPopWav);
 
 XT_Instrument_Class SimonSays;
 int8_t PROGMEM ToneRed[] = {NOTE_CS5, SCORE_END};
@@ -103,36 +104,82 @@ XT_MusicScore_Class SimonRed(ToneRed, TEMPO_MODERATO, &SimonSays);
 XT_MusicScore_Class SimonBlue(ToneBlue, TEMPO_MODERATO, &SimonSays);
 XT_MusicScore_Class SimonGreen(ToneGreen, TEMPO_MODERATO, &SimonSays);
 XT_MusicScore_Class SimonYellow(ToneYellow, TEMPO_MODERATO, &SimonSays);
+struct SimonModule {
+    XT_MusicScore_Class Red;
+    XT_MusicScore_Class Blue;
+    XT_MusicScore_Class Green;
+    XT_MusicScore_Class Yellow;
+    uint32_t id;
+    bool delay;
+    bool cued;
+    byte sound;
+    int32_t time;
+};
+// Support for up to 4 Simon modules connected - only plan to produce 3 so this is enough
+SimonModule SimonMods[4] = {{SimonRed, SimonBlue, SimonGreen, SimonYellow, 0, false, false, 0, 0},
+                            {SimonRed, SimonBlue, SimonGreen, SimonYellow, 0, false, false, 0, 0},
+                            {SimonRed, SimonBlue, SimonGreen, SimonYellow, 0, false, false, 0, 0},
+                            {SimonRed, SimonBlue, SimonGreen, SimonYellow, 0, false, false, 0, 0}};
+
+// bool simon_delay;
+// byte simon_sound;
+// bool simon_cued;
+// int32_t simon_time;
 
 // Capacitor discharge:
 // Tone sounds with 25 seconds left
 // When discharging, will increase timer x5 normal speed
 // Tone starts 300 Hz and ends 450 Hz
 XT_Instrument_Class DisInstrument;
-XT_Wav_Class SoundCapPop(CapPopWav);
-byte cap_tone_playing = false;
 
-bool simon_delay;
-byte simon_sound;
-bool simon_cued;
-int32_t simon_time;
+struct CapDisModule {
+    uint32_t id;
+    bool tone_playing;
+    bool cued;
+    byte sound;
+    bool repeat;
+    int32_t time;
+    int32_t distimeleft;
+    int8_t disdirection;
+    int32_t disvol;
+    int32_t disfreq;
 
+};
+// Support for up to 3 CapDis modules connected - only plan to produce 2 so this is enough
+CapDisModule CapDisMods[3] = {{0, false, false, 0, false, 0},
+                              {0, false, false, 0, false, 0},
+                              {0, false, false, 0, false, 0}};
+
+// bool cap_tone_playing = false;
 bool needy_cued;
 byte needy_sound;
 bool needy_repeat;
 int32_t needy_time;
 
-int32_t distimeleft = 45000;
-int8_t disdirection = -1; // -1 is decreasing time (increasing tone), 1 is increasing time (decreasing tone)
-int32_t disvol = 0; // 0 @25s left, 127 @0s left
-int32_t disfreq = 300;
+// int32_t distimeleft = 45000;
+// int8_t disdirection = -1; // -1 is decreasing time (increasing tone), 1 is increasing time (decreasing tone)
+// int32_t disvol = 0; // 0 @25s left, 127 @0s left
+// int32_t disfreq = 300;
 int32_t disvolstepsec = 1000*127/25; // 5k steps per second, 5 steps per ms,
 int32_t disfreqstepsec = 1000*150/25; // 6k steps per second, 6 steps per ms
-int8_t disvollut[] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11, 12, 12, 12, 13, 13, 14, 15, 15, 16, 16, 17, 18, 19, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 32, 33, 34, 36, 37, 39, 40, 42, 44, 46, 47, 49, 52, 54, 56, 58, 61, 63, 66, 69, 72, 75, 78, 81, 84, 88, 92, 96, 100, 104, 108, 113, 117, 122, 127};
+int8_t disvollut[] = {0, 1, 1, 1, 1, 1, 1, 1,
+                      1, 1, 1, 2, 2, 2, 2, 2,
+                      2, 2, 2, 2, 2, 2, 2, 2,
+                      2, 2, 2, 3, 3, 3, 3, 3,
+                      3, 3, 3, 3, 3, 4, 4, 4,
+                      4, 4, 4, 4, 5, 5, 5, 5,
+                      5, 6, 6, 6, 6, 6, 7, 7,
+                      7, 7, 8, 8, 8, 9, 9, 9,
+                      10, 10, 11, 11, 12, 12, 12, 13,
+                      13, 14, 15, 15, 16, 16, 17, 18,
+                      19, 19, 20, 21, 22, 23, 24, 25,
+                      26, 27, 28, 29, 30, 32, 33, 34,
+                      36, 37, 39, 40, 42, 44, 46, 47,
+                      49, 52, 54, 56, 58, 61, 63, 66,
+                      69, 72, 75, 78, 81, 84, 88, 92,
+                      96, 100, 104, 108, 113, 117, 122, 127};
 
 int8_t sound_test_counter;
-
-XT_MusicScore_Class *test_array[4] = {&SimonRed, &SimonBlue, &SimonGreen, &SimonYellow};
 
 char serial_number[] = "XXXXXX";
 bool serial_inbox = false;
@@ -227,7 +274,10 @@ void CANInbox() {
             game_running = false;
             tockdone = true;
             tickstarted = false;
-            cap_tone_playing = false;
+            for (byte ii=0; ii<3; ii++){
+                CapDisMods[ii].tone_playing = false;
+            }
+            // cap_tone_playing = false;
             byte bomb_exploded;
             if (ktomeCAN.can_msg[1] == '1'){
                 bomb_exploded = 1;
@@ -237,40 +287,96 @@ void CANInbox() {
                 bomb_exploded = 2;
             }
             soundEnding(bomb_exploded);
-            // DacAudio.StopAllSounds();
-            // if (ktomeCAN.can_msg[1] == '1') {
-            //     DacAudio.Play(&SoundExpl);
-            // }
+            // SIMON & CAPDIS - unregister modules
+            for (byte ii=0; ii<4; ii++){
+                SimonMods[ii].id = 0; // Un-log each module from this slot
+                SimonMods[ii].cued = false;
+                SimonMods[ii].delay = false;
+                SimonMods[ii].time = 0;
+                SimonMods[ii].sound = 0;
+            }
+            for (byte ii=0; ii<3; ii++){
+                CapDisMods[ii].id = 0; // Un-log each module from this slot
+                CapDisMods[ii].cued = false;
+                CapDisMods[ii].tone_playing = false;
+                CapDisMods[ii].time = 0;
+                CapDisMods[ii].sound = 0;
+                CapDisMods[ii].repeat = false;
+                CapDisMods[ii].disdirection = -1;
+                CapDisMods[ii].disfreq = 300;
+                CapDisMods[ii].distimeleft = 45000;
+                CapDisMods[ii].disvol = 0;
+            }
         } else if (ktomeCAN.can_msg[0] == 'A') {
             game_running = true;
             strike_number = 0;
         } else if (ktomeCAN.can_msg[0] == 'u') {
             if (ktomeCAN.can_msg[1] == '+') {
-                String temp = ktomeCAN.can_msg;
-                temp = temp.substring(2);
-                int32_t needy_time = temp.toDouble();
-                distimeleft = needy_time;
-                disdirection = +5;
+                // CAPDIS - handle sounds
+                for (byte ii=0; ii<3; ii++){
+                    if (CapDisMods[ii].id == ktomeCAN.can_msg_id){ // Check if this CapDis module slot is filled with the calling module
+                        String temp = ktomeCAN.can_msg;
+                        temp = temp.substring(2);
+                        int32_t needy_time = temp.toDouble();
+                        CapDisMods[ii].distimeleft = needy_time;
+                        CapDisMods[ii].disdirection = +5;
+                        break;
+                    }
+                }
+                // String temp = ktomeCAN.can_msg;
+                // temp = temp.substring(2);
+                // int32_t needy_time = temp.toDouble();
+                // distimeleft = needy_time;
+                // disdirection = +5;
             } else if (ktomeCAN.can_msg[1] == '-') {
-                String temp = ktomeCAN.can_msg;
-                temp = temp.substring(2);
-                int32_t needy_time = temp.toDouble();
-                distimeleft = needy_time;
-                disdirection = -1;
-                if (!cap_tone_playing){
-                    cap_tone_playing = true;
-                    DacAudio.Play(&DisInstrument);
+                // CAPDIS - handle sounds
+                for (byte ii=0; ii<3; ii++){
+                    if (CapDisMods[ii].id == ktomeCAN.can_msg_id){ // Check if this CapDis module slot is filled with the calling module
+                        String temp = ktomeCAN.can_msg;
+                        temp = temp.substring(2);
+                        int32_t needy_time = temp.toDouble();
+                        CapDisMods[ii].distimeleft = needy_time;
+                        CapDisMods[ii].disdirection = -1;
+                        if (!CapDisMods[ii].tone_playing){
+                            CapDisMods[ii].tone_playing = true;
+                            DacAudio.Play(&DisInstrument);
+                        }
+                        break;
+                    }
+                }
+                // String temp = ktomeCAN.can_msg;
+                // temp = temp.substring(2);
+                // int32_t needy_time = temp.toDouble();
+                // distimeleft = needy_time;
+                // disdirection = -1;
+                // if (!cap_tone_playing){
+                //     cap_tone_playing = true;
+                //     DacAudio.Play(&DisInstrument);
                     
-                }
+                // }
             } else if (ktomeCAN.can_msg[1] < '5') {
-                simon_sound = ktomeCAN.can_msg[1] - '0';
-                simon_delay = ktomeCAN.can_msg[2] - '0';
-                simon_cued = true;
-                if (simon_delay) {
-                    simon_time = millis() + 100;
-                } else {
-                    simon_time = millis();
+                // SIMON - handle sounds
+                for (byte ii=0; ii<4; ii++){
+                    if (SimonMods[ii].id == ktomeCAN.can_msg_id){ // Check if this Simon module slot is filled with the calling module
+                        SimonMods[ii].cued = true;
+                        SimonMods[ii].delay = ktomeCAN.can_msg[2] - '0';
+                        SimonMods[ii].sound = ktomeCAN.can_msg[1] - '0';
+                        if (SimonMods[ii].delay) {
+                            SimonMods[ii].time = millis() + 100;
+                        } else {
+                            SimonMods[ii].time = millis();
+                        }
+                        break;
+                    }
                 }
+                // simon_sound = ktomeCAN.can_msg[1] - '0';
+                // simon_delay = ktomeCAN.can_msg[2] - '0';
+                // simon_cued = true;
+                // if (simon_delay) {
+                //     simon_time = millis() + 100;
+                // } else {
+                //     simon_time = millis();
+                // }
             } else if (ktomeCAN.can_msg[1] < '7') {
                 needy_sound = ktomeCAN.can_msg[1] - '5';
                 // Serial.println(needy_sound);
@@ -285,40 +391,94 @@ void CANInbox() {
         } else if (ktomeCAN.can_msg[0] == 'x' && (ktomeCAN.can_msg_id & can_ids.CapDis)>0){ // Capacitor discharge has struck
             DacAudio.RemoveFromPlayList(&DisInstrument);
             DacAudio.Play(&SoundCapPop);
+        } else if (ktomeCAN.can_msg[0] == 'i') { // module is registered
+            if ((ktomeCAN.can_msg_id & can_ids.CapDis)>0){ // Capacitor discharge is registered
+                // CAPDIS - register
+                for (byte ii=0; ii<3; ii++){
+                    if (CapDisMods[ii].id == 0){ // Check if this Simon module slot is filled with a registered module
+                        CapDisMods[ii].id = ktomeCAN.can_msg_id; // Log this registering module to this slot
+                        CapDisMods[ii].cued = false;
+                        CapDisMods[ii].repeat = false;
+                        CapDisMods[ii].sound = 0;
+                        CapDisMods[ii].time = 0;
+                        CapDisMods[ii].tone_playing = false;
+                        CapDisMods[ii].disdirection = -1;
+                        CapDisMods[ii].disfreq = 300;
+                        CapDisMods[ii].distimeleft = 45000;
+                        CapDisMods[ii].disvol = 0;
+                        break;
+                    }
+                }
+            } else if ((ktomeCAN.can_msg_id & can_ids.Simon)>0){ // Simon is registered
+                // SIMON - register
+                for (byte ii=0; ii<4; ii++){
+                    if (SimonMods[ii].id == 0){ // Check if this Simon module slot is filled with a registered module
+                        SimonMods[ii].id = ktomeCAN.can_msg_id; // Log this registering module to this slot
+                        SimonMods[ii].cued = false;
+                        SimonMods[ii].delay = false;
+                        SimonMods[ii].time = 0;
+                        SimonMods[ii].sound = 0;
+                        break;
+                    }
+                }
+            }
         }
     }
 }
 
 void playSimon() {
-    if (simon_cued && (millis() >= simon_time)) {
-        simon_cued = false;
-        switch (simon_sound) {
-            case 0:
-                DacAudio.RemoveFromPlayList(&SimonBlue);
-                DacAudio.RemoveFromPlayList(&SimonGreen);
-                DacAudio.RemoveFromPlayList(&SimonYellow);
-                DacAudio.Play(&SimonRed);
-                break;
-            case 1:
-                DacAudio.RemoveFromPlayList(&SimonRed);
-                DacAudio.RemoveFromPlayList(&SimonGreen);
-                DacAudio.RemoveFromPlayList(&SimonYellow);
-                DacAudio.Play(&SimonBlue);
-                break;
-            case 2:
-                DacAudio.RemoveFromPlayList(&SimonRed);
-                DacAudio.RemoveFromPlayList(&SimonBlue);
-                DacAudio.RemoveFromPlayList(&SimonYellow);
-                DacAudio.Play(&SimonGreen);
-                break;
-            case 3:
-                DacAudio.RemoveFromPlayList(&SimonRed);
-                DacAudio.RemoveFromPlayList(&SimonBlue);
-                DacAudio.RemoveFromPlayList(&SimonGreen);
-                DacAudio.Play(&SimonYellow);
-                break;
+    for (byte ii=0; ii<4; ii++){
+        if (SimonMods[ii].cued && (millis() >= SimonMods[ii].time)) {
+            SimonMods[ii].cued = false;
+            DacAudio.RemoveFromPlayList(&SimonMods[ii].Red);
+            DacAudio.RemoveFromPlayList(&SimonMods[ii].Blue);
+            DacAudio.RemoveFromPlayList(&SimonMods[ii].Green);
+            DacAudio.RemoveFromPlayList(&SimonMods[ii].Yellow);
+            switch (SimonMods[ii].sound) {
+                case 0:
+                    DacAudio.Play(&SimonMods[ii].Red);
+                    break;
+                case 1:
+                    DacAudio.Play(&SimonMods[ii].Blue);
+                    break;
+                case 2:
+                    DacAudio.Play(&SimonMods[ii].Green);
+                    break;
+                case 3:
+                    DacAudio.Play(&SimonMods[ii].Yellow);
+                    break;
+            }
         }
     }
+    // if (simon_cued && (millis() >= simon_time)) {
+    //     simon_cued = false;
+    //     switch (simon_sound) {
+    //         case 0:
+    //             DacAudio.RemoveFromPlayList(&SimonBlue);
+    //             DacAudio.RemoveFromPlayList(&SimonGreen);
+    //             DacAudio.RemoveFromPlayList(&SimonYellow);
+    //             DacAudio.Play(&SimonRed);
+    //             break;
+    //         case 1:
+    //             DacAudio.RemoveFromPlayList(&SimonRed);
+    //             DacAudio.RemoveFromPlayList(&SimonGreen);
+    //             DacAudio.RemoveFromPlayList(&SimonYellow);
+    //             DacAudio.Play(&SimonBlue);
+    //             break;
+    //         case 2:
+    //             DacAudio.RemoveFromPlayList(&SimonRed);
+    //             DacAudio.RemoveFromPlayList(&SimonBlue);
+    //             DacAudio.RemoveFromPlayList(&SimonYellow);
+    //             DacAudio.Play(&SimonGreen);
+    //             break;
+    //         case 3:
+    //             DacAudio.RemoveFromPlayList(&SimonRed);
+    //             DacAudio.RemoveFromPlayList(&SimonBlue);
+    //             DacAudio.RemoveFromPlayList(&SimonGreen);
+    //             DacAudio.Play(&SimonYellow);
+    //             break;
+    //     }
+    // }
 }
 
 void playNeedy() {
@@ -342,17 +502,30 @@ void playNeedy() {
 }
 
 void playCapDis() {
-    if (cap_tone_playing){
-        distimeleft += disdirection * time_step;
+    for (byte ii=0; ii<3; ii++){
+        if (CapDisMods[ii].tone_playing){
+            CapDisMods[ii].distimeleft += CapDisMods[ii].disdirection * time_step;
 
-        disvol = 127 - (distimeleft/1000.0 * disvolstepsec/1000.0);
-        if (disvol < 0){
-            disvol = 0;
+            CapDisMods[ii].disvol = 127 - (CapDisMods[ii].distimeleft/1000.0 * disvolstepsec/1000.0);
+            if (CapDisMods[ii].disvol < 0){
+                CapDisMods[ii].disvol = 0;
+            }
+            CapDisMods[ii].disfreq = 450 - (CapDisMods[ii].distimeleft/1000.0 * disfreqstepsec/1000.0);
+            DisInstrument.SetFrequency(CapDisMods[ii].disfreq);
+            DisInstrument.Volume = disvollut[CapDisMods[ii].disvol];
         }
-        disfreq = 450 - (distimeleft/1000.0 * disfreqstepsec/1000.0);
-        DisInstrument.SetFrequency(disfreq);
-        DisInstrument.Volume = disvollut[disvol];
     }
+    // if (cap_tone_playing){
+    //     distimeleft += disdirection * time_step;
+
+    //     disvol = 127 - (distimeleft/1000.0 * disvolstepsec/1000.0);
+    //     if (disvol < 0){
+    //         disvol = 0;
+    //     }
+    //     disfreq = 450 - (distimeleft/1000.0 * disfreqstepsec/1000.0);
+    //     DisInstrument.SetFrequency(disfreq);
+    //     DisInstrument.Volume = disvollut[disvol];
+    // }
 }
 
 //**********************************************************************
