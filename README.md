@@ -12,11 +12,11 @@ The current plan is to have each module run with its own ESP32 microcontroller, 
 ### Design:
 - [X] : Complete design and print of widgets
 - [X] : Complete design and print of blank modules
-- [ ] : Complete design and print of lower case panels
+- [X] : Complete design and print of lower case panels
 - [X] : Design and print Memory
-- [ ] : Design and print Morse Code
+- [X] : Design and print Morse Code
 - [ ] : Design and print Venting Gas
-- [ ] : Design and print Complicated Wires
+- [X] : Design and print Complicated Wires
 ### PCB:
 - [X] : Draw up generic PCB schematic and gerber for modules
 - [X] : Order test PCBs
