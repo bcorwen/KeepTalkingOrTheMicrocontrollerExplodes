@@ -64,7 +64,7 @@
     String module_name = "=== KTOME: WIRES ===";
 #elif MODULE_TYPE == MODULE_BUTTON
     #define CONFIG_CAN_MODULE_TYPE  can_ids.Button
-    #define FLED_LENGTH 2
+    #define FLED_LENGTH 3
     #include <KTOME_Button.h>
     KTOME_Button module;
     String module_name = "=== KTOME: BUTTON ===";
@@ -107,7 +107,7 @@
 #elif MODULE_TYPE == MODULE_PASSWORD
     #define CONFIG_CAN_MODULE_TYPE  can_ids.Password
     #define fled_length 1
-    // #include <KTOME_Password.h>
+    #include <KTOME_Password.h>
     KTOME_Password module;
     String module_name = "=== KTOME: PASSWORD ===";
 #elif MODULE_TYPE == MODULE_VENT
