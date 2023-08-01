@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <KTOME_common.h>
 
-#define BUTTON_SWT   GPIO_NUM_5
+#define BUTTON_SWT   GPIO_NUM_33
 
 class KTOME_Button {
 	private:
