@@ -12,7 +12,7 @@
 //
 //======================================================================
 
-// #define DEBUG 1
+#define DEBUG 1
 
 //**********************************************************************
 // LIBRARIES
@@ -50,16 +50,17 @@ void KTOME_Button::start(FLedPWM *fleds) {
 
 void KTOME_Button::reset() {
     fleds_addr->write(1, CRGB::Black);
+    fleds_addr->write(2, CRGB::Black);
     strike_count = 0;
     game_running = false;
     module_solved = false;
     wait_for_timer = false;
     strip_on = false;
-    stripOn();
 }
 
 void KTOME_Button::powerOn() {
     fleds_addr->fade(1, CRGB::Green, CRGB::Black, 350, 150, 150, 150, 0, 3, 0);
+    fleds_addr->fade(2, CRGB::Green, CRGB::Black, 350, 150, 150, 150, 0, 3, 0);
 }
 
 void KTOME_Button::generate() {
@@ -245,25 +246,27 @@ void KTOME_Button::stripOn(){
         }
         DEBUG_PRINT("Strip colour: ");
         DEBUG_PRINTLN(this_colour);
-        if (this_colour >= 1) { //Add red
-            // DEBUG_PRINTLN("Adding red...");
-            // leds_button[0].setPulse(255,127,166,333,500,333);
-        }
-            if (this_colour == 1 || this_colour == 2) { //Add green
-            // DEBUG_PRINTLN("Adding green...");
-            // leds_button[1].setPulse(153,76,166,333,500,333);
-        }      
-        if (this_colour == 0 || this_colour == 1) { //Add blue
-            // DEBUG_PRINTLN("Adding blue...");
-            // leds_button[2].setPulse(153,76,166,333,500,333);
-        }
+        // if (this_colour >= 1) { //Add red
+        //     // DEBUG_PRINTLN("Adding red...");
+        //     // leds_button[0].setPulse(255,127,166,333,500,333);
+        // }
+        // if (this_colour == 1 || this_colour == 2) { //Add green
+        //     // DEBUG_PRINTLN("Adding green...");
+        //     // leds_button[1].setPulse(153,76,166,333,500,333);
+        // }      
+        // if (this_colour == 0 || this_colour == 1) { //Add blue
+        //     // DEBUG_PRINTLN("Adding blue...");
+        //     // leds_button[2].setPulse(153,76,166,333,500,333);
+        // }
         fleds_addr->fade(1, button_colour_hi[this_colour], button_colour_lo[this_colour], 500, 166, 333, 333);
+        fleds_addr->fade(2, button_colour_hi[this_colour], button_colour_lo[this_colour], 500, 166, 333, 333);
     } else {
         // Turn lights off
         for (byte ii = 0; ii < 3; ii++){
             // leds_button[ii].setPulse(0,0,166,333,500,333);
             // leds_button[ii].write(false);
             fleds_addr->write(1, CRGB::Black);
+            fleds_addr->write(2, CRGB::Black);
         }
     }
 }
@@ -278,7 +281,8 @@ byte KTOME_Button::update() { // Update anything not controlled by FastLED
 
 void KTOME_Button::explode() {
     game_running = false;
-    fleds_addr->blink(1, CRGB::Red, CRGB::Black, 100, 2);
+    fleds_addr->blink(1, CRGB::Red, CRGB::Black, 100, 1);
+    fleds_addr->blink(2, CRGB::Red, CRGB::Black, 100, 1);
 }
 
 void KTOME_Button::defuse() {
